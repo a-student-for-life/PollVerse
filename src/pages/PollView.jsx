@@ -15,9 +15,14 @@ const MODE_CONFIG = {
     accentGradient: 'from-primary-500 via-indigo-500 to-emerald-500',
     aiGradient: 'from-indigo-500 via-purple-500 to-indigo-600',
     aiBg: 'bg-indigo-100', aiIcon: 'text-indigo-600',
-    aiTitle: 'AI Consensus', aiTextColor: 'text-indigo-900',
+    aiTitle: 'The TL;DR on why people are fighting:', aiTextColor: 'text-indigo-900',
     aiBorder: 'border-indigo-100/50', aiBgLight: 'bg-indigo-50/50',
     feedTitle: 'Hot Takes', reasonsEmpty: 'No one has dropped a hot take yet.',
+    voteCta: 'Lock It In 🔒',
+    majorityMsg: "You're with the mob. 🐑 (Just kidding, good call)",
+    minorityMsg: "Oof, hot take. You're in the minority.",
+    tieMsg: "It's a bloodbath. 50/50 split.",
+    ideaPrompt: "Think they're all wrong? Drop a better idea.",
     reactions: [
       { key: 'type1', emoji: '😂' },
       { key: 'type2', emoji: '💯' },
@@ -30,9 +35,14 @@ const MODE_CONFIG = {
     accentGradient: 'from-slate-400 via-sky-500 to-slate-500',
     aiGradient: 'from-slate-500 via-sky-600 to-slate-500',
     aiBg: 'bg-sky-100', aiIcon: 'text-sky-600',
-    aiTitle: 'AI Analysis', aiTextColor: 'text-sky-900',
+    aiTitle: 'Key themes from participant rationale:', aiTextColor: 'text-sky-900',
     aiBorder: 'border-sky-100/50', aiBgLight: 'bg-sky-50/50',
     feedTitle: 'Key Responses', reasonsEmpty: 'No responses have been submitted yet.',
+    voteCta: 'Submit Response',
+    majorityMsg: "Aligned with the consensus.",
+    minorityMsg: "Divergent perspective detected.",
+    tieMsg: "Evenly divided. A polarizing topic.",
+    ideaPrompt: "Propose an alternative perspective.",
     ideaCloudLabel: 'Alternative Perspectives',
     communityBadge: '📋 Notable Suggestion',
     reactions: [
@@ -65,8 +75,8 @@ function formatTimeLeft(ms) {
 }
 
 // ─── You vs Crowd Card ────────────────────────────────────────────────────────
-function YouVsCrowd({ poll, selectedOption }) {
-  if (!selectedOption || poll.totalVotes < 1) return null;
+function YouVsCrowd({ poll, selectedOption, cfg, revealStage }) {
+  if (!selectedOption || poll.totalVotes < 1 || revealStage < 3) return null;
 
   const winner = poll.options.reduce((a, b) => (b.voteCount > a.voteCount ? b : a));
   const userOption = poll.options.find(o => o.id === selectedOption);
@@ -78,34 +88,35 @@ function YouVsCrowd({ poll, selectedOption }) {
 
   let headline, subCopy, cardCls;
   if (isTie) {
-    headline = "It's a dead heat right now ⚖️";
+    headline = cfg.tieMsg;
     subCopy = "Both sides are evenly matched — your vote matters more than usual.";
-    cardCls = "bg-slate-50/40 border-slate-200 border-l-[3px] border-l-slate-400";
+    cardCls = "bg-slate-900 border-slate-700 text-white shadow-2xl scale-[1.02]";
   } else if (isMajority) {
-    headline = "You're with the crowd 🙌";
-    subCopy = `${userPct}% of voters agree with you. Scroll down to see why.`;
-    cardCls = "bg-violet-50/40 border-slate-200 border-l-[3px] border-l-violet-400";
+    headline = cfg.majorityMsg;
+    subCopy = `${userPct}% of voters agree with you. Your intuition is aligned with the crowd.`;
+    cardCls = "bg-indigo-600 border-indigo-400 text-white shadow-2xl scale-[1.02]";
   } else {
-    headline = "You're in the minority 👀";
-    subCopy = `Only ${userPct}% chose this. See why others disagree in the takes below.`;
-    cardCls = "bg-amber-50/40 border-slate-200 border-l-[3px] border-l-amber-400";
+    headline = cfg.minorityMsg;
+    subCopy = `Only ${userPct}% chose this. Explore the takes below to see the other side.`;
+    cardCls = "bg-rose-600 border-rose-400 text-white shadow-2xl scale-[1.02]";
   }
 
   return (
-    <div className={clsx("rounded-[20px] border p-5 animate-in fade-in slide-in-from-bottom-2 duration-500", cardCls)}>
-      <div className="section-eyebrow mb-3">You vs The Crowd</div>
-      <p className="text-base font-bold text-slate-800 mb-1">{headline}</p>
-      <p className="text-sm text-slate-500 leading-relaxed">{subCopy}</p>
-      <div className="mt-4 flex flex-wrap gap-3 text-xs">
-        <div className="flex items-center gap-1.5 bg-white rounded-xl px-3 py-2 border border-slate-200 shadow-sm">
-          <span className="font-semibold text-slate-500">You chose</span>
-          <span className="font-bold text-slate-800">{userOption.text}</span>
+    <div className={clsx("rounded-[24px] border-2 p-7 transition-all duration-700 reveal-dramatic", cardCls)}>
+      <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-4 opacity-70">Verdict: You vs The Crowd</div>
+      <p className="text-2xl font-black mb-2 leading-tight">{headline}</p>
+      <p className="text-sm font-medium opacity-90 leading-relaxed max-w-[90%]">{subCopy}</p>
+      
+      <div className="mt-6 flex flex-wrap gap-3">
+        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-xl px-4 py-2.5 border border-white/20">
+          <span className="text-[11px] font-bold uppercase tracking-wider opacity-70">You chose</span>
+          <span className="font-black text-sm">{userOption.text}</span>
         </div>
         {!isMajority && !isTie && (
-          <div className="flex items-center gap-1.5 bg-white rounded-xl px-3 py-2 border border-slate-200 shadow-sm">
-            <Users className="w-3.5 h-3.5 text-slate-400" />
-            <span className="font-semibold text-slate-500">Most chose</span>
-            <span className="font-bold text-slate-800">{winner.text}</span>
+          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-xl px-4 py-2.5 border border-white/20">
+            <Users className="w-3.5 h-3.5 opacity-70" />
+            <span className="text-[11px] font-bold uppercase tracking-wider opacity-70">Crowd chose</span>
+            <span className="font-black text-sm">{winner.text}</span>
           </div>
         )}
       </div>
@@ -290,13 +301,39 @@ export default function PollView() {
   const [hasBrowsed, setHasBrowsed] = useState(() => {
     try { return !!localStorage.getItem(`browsed_${id}`); } catch { return false; }
   });
+  const [revealStage, setRevealStage] = useState(0); // 0: voting, 1: locking, 2: confirmed, 3: verdict, 4: full
   const [now, setNow] = useState(Date.now());
+
+  // Handle auto-reveal for existing voters
+  useEffect(() => {
+    if (hasVoted || isCreator) setRevealStage(4);
+  }, [hasVoted, isCreator]);
+
+  // Staged reveal sequence after voting
+  useEffect(() => {
+    if (revealStage === 1 && !isVoting && hasVoted) {
+      setTimeout(() => setRevealStage(2), 400);
+    }
+    if (revealStage === 2) {
+      setTimeout(() => setRevealStage(3), 800);
+    }
+    if (revealStage === 3) {
+      setTimeout(() => setRevealStage(4), 1400);
+    }
+  }, [revealStage, isVoting, hasVoted]);
 
   // Timer for self-destruct countdown
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Proactive self-destruct cleanup
+  useEffect(() => {
+    if (poll?.selfDestruct && poll?.expiresAt && poll.expiresAt < now) {
+      deletePoll(id).catch(console.error);
+    }
+  }, [poll, now, id]);
 
   useEffect(() => {
     setLoading(true);
@@ -350,6 +387,7 @@ export default function PollView() {
     if (isExpired) return;
     if (!selectedOption) return;
     setIsVoting(true);
+    setRevealStage(1);
     setError('');
     try {
       await voteOnPoll(id, selectedOption, reason);
@@ -478,15 +516,6 @@ export default function PollView() {
         )}
 
         <div className="absolute top-5 right-6 flex items-center gap-2">
-          {poll.selfDestruct && (
-            <div className={clsx(
-              "flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border shadow-sm transition-all",
-              isExpired ? "bg-rose-50 border-rose-200 text-rose-600" : "bg-white border-rose-100 text-rose-500"
-            )}>
-              <Timer className="w-3.5 h-3.5" />
-              {isExpired ? "Exploded" : formatTimeLeft(poll.expiresAt - now)}
-            </div>
-          )}
           {isStructured ? (
             <div className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border bg-slate-50 text-slate-600 border-slate-200">
               🔒 Vote Required
@@ -510,7 +539,40 @@ export default function PollView() {
           </button>
         </div>
 
-        <h1 className={clsx("font-extrabold text-slate-800 tracking-tight leading-tight pt-8", showResults ? "text-3xl md:text-4xl mb-4" : "text-3xl mb-8")}>
+        {/* ─── Unified Timer Bar ────────────────────────────── */}
+        {(poll.selfDestruct || (poll.correctOptionId && !isRevealed)) && (
+          <div className="mt-8 mb-4 flex flex-wrap justify-center gap-4 animate-in fade-in zoom-in-95 duration-700">
+            {poll.selfDestruct && (
+              <div className={clsx(
+                "flex items-center gap-2 px-4 py-2 rounded-2xl border-2 shadow-sm transition-all",
+                isExpired ? "bg-rose-50 border-rose-200 text-rose-600" : "bg-white border-rose-100 text-rose-500"
+              )}>
+                <div className="bg-rose-500 p-1 rounded-lg text-white">
+                  <Timer className="w-3.5 h-3.5" />
+                </div>
+                <div className="text-left">
+                  <p className="text-[10px] font-black uppercase tracking-wider opacity-60 leading-none mb-0.5">Self-Destruct</p>
+                  <p className="text-xs font-black tabular-nums">{isExpired ? "Exploded" : formatTimeLeft(poll.expiresAt - now)}</p>
+                </div>
+              </div>
+            )}
+            {poll.correctOptionId && !isRevealed && (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border-2 border-emerald-100 bg-white text-emerald-600 shadow-sm transition-all">
+                <div className="bg-emerald-500 p-1 rounded-lg text-white">
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
+                <div className="text-left">
+                  <p className="text-[10px] font-black uppercase tracking-wider opacity-60 leading-none mb-0.5">Answer Reveal</p>
+                  <p className="text-xs font-black tabular-nums">
+                    {poll.revealAt ? formatTimeLeft(poll.revealAt - now) : "Creator Reveal"}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <h1 className={clsx("font-extrabold text-slate-800 tracking-tight leading-tight pt-4", showResults ? "text-3xl md:text-4xl mb-4" : "text-3xl mb-8")}>
           {poll.title}
         </h1>
 
@@ -613,10 +675,13 @@ export default function PollView() {
                           isPro ? "bg-gradient-to-r from-sky-600 to-slate-600 shadow-sky-500/30" : "bg-gradient-to-r from-primary-600 to-indigo-600 shadow-indigo-500/30"
                         )}
                       >
-                        {isVoting ? (
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        {revealStage === 1 ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Locking in...
+                          </div>
                         ) : (
-                          <><Send className="w-4 h-4" /> Submit Vote</>
+                          <><Send className="w-4 h-4" /> {cfg.voteCta}</>
                         )}
                       </button>
                       
@@ -659,77 +724,81 @@ export default function PollView() {
 
             {/* ════ ZONE 1: FEEDBACK ════════════════════════════ */}
             {(hasVoted || isCreator) && (
-              <div className={clsx("space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300", hasVoted && !isCreator ? "" : "")}>
+              <div className={clsx("space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500")}>
 
                 {/* Vote Confirmed (participants only) */}
-                {hasVoted && !isCreator && (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-[20px] p-4 flex items-center gap-3.5 text-emerald-800">
-                    <div className="bg-white p-1.5 text-emerald-500 rounded-full shrink-0 shadow-sm border border-emerald-100">
-                      <CheckCircle2 className="w-5 h-5" />
+                {revealStage === 2 && !isCreator && (
+                  <div className="bg-white border-2 border-emerald-500 rounded-[24px] p-6 flex items-center gap-4 text-emerald-800 shadow-xl reveal-dramatic">
+                    <div className="bg-emerald-500 p-2 text-white rounded-full shrink-0 shadow-lg">
+                      <CheckCircle2 className="w-6 h-6" />
                     </div>
                     <div>
-                      <p className="font-bold">Vote Counted!</p>
-                      <p className="text-sm text-emerald-600 font-medium">Thank you for participating.</p>
+                      <p className="font-black text-xl uppercase tracking-tighter">Vote Locked!</p>
+                      <p className="text-sm text-emerald-600 font-bold italic">Gathering crowd data...</p>
                     </div>
                   </div>
                 )}
 
                 {/* You vs Crowd (participants only) */}
                 {hasVoted && !isCreator && (
-                  <YouVsCrowd poll={poll} selectedOption={selectedOption} />
+                  <YouVsCrowd poll={poll} selectedOption={selectedOption} cfg={cfg} revealStage={revealStage} />
                 )}
 
-                {/* Correctness (participants + creator) */}
-                <CorrectnessCard 
-                  poll={poll} 
-                  selectedOption={selectedOption} 
-                  isCreator={isCreator} 
-                  isRevealed={isRevealed} 
-                  now={now}
-                  onRevealNow={handleRevealNow}
-                />
+                {/* Correctness (participants + creator) - only show after verdict */}
+                {revealStage >= 3 && (
+                  <CorrectnessCard 
+                    poll={poll} 
+                    selectedOption={selectedOption} 
+                    isCreator={isCreator} 
+                    isRevealed={isRevealed} 
+                    now={now}
+                    onRevealNow={handleRevealNow}
+                  />
+                )}
               </div>
             )}
 
             {/* ════ ZONE 2: CHART ══════════════════════════════ */}
-            {poll.totalVotes === 0 ? (
-              <div className="bg-white rounded-[20px] p-12 text-center shadow-[0_4px_16px_rgb(0,0,0,0.04)] border border-slate-100 animate-in fade-in duration-500">
-                <p className="text-slate-500 font-semibold text-lg mb-1">No Votes Yet</p>
-                <p className="text-slate-400 text-sm">Be the first to vote!</p>
-              </div>
-            ) : (
-              <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-[0_4px_16px_rgb(0,0,0,0.04)] border border-slate-100 animate-in fade-in duration-500">
-                <p className="section-eyebrow mb-5">Live Distribution</p>
-                <div className="h-[260px] -ml-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 80, left: 0, bottom: 0 }}>
-                      <XAxis type="number" hide />
-                      <YAxis dataKey="text" type="category" width={110} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                      <Tooltip
-                        cursor={{ fill: '#f8fafc' }}
-                        contentStyle={{ borderRadius: '14px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', fontWeight: 'bold', fontSize: 13 }}
-                        formatter={(v) => [`${v} votes`, '']}
-                      />
-                      <Bar dataKey="voteCount" radius={[0, 8, 8, 0]} barSize={30}>
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                        <LabelList
-                          content={(props) => (
-                            <YouLabel {...props} selectedOption={selectedOption} />
-                          )}
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+            {revealStage === 4 && (
+              poll.totalVotes === 0 ? (
+                <div className="bg-white rounded-[20px] p-12 text-center shadow-[0_4px_16px_rgb(0,0,0,0.04)] border border-slate-100 animate-in fade-in duration-500">
+                  <p className="text-slate-500 font-semibold text-lg mb-1">No Votes Yet</p>
+                  <p className="text-slate-400 text-sm">Be the first to vote!</p>
                 </div>
-              </div>
+              ) : (
+                <div className="bg-white rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                  <p className="section-eyebrow mb-6">Live Distribution</p>
+                  <div className="h-[280px] -ml-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 80, left: 0, bottom: 0 }}>
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="text" type="category" width={110} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          cursor={{ fill: '#f8fafc' }}
+                          contentStyle={{ borderRadius: '14px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', fontWeight: 'bold', fontSize: 13 }}
+                          formatter={(v) => [`${v} votes`, '']}
+                        />
+                        <Bar dataKey="voteCount" radius={[0, 10, 10, 0]} barSize={34}>
+                          {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                          <LabelList
+                            content={(props) => (
+                              <YouLabel {...props} selectedOption={selectedOption} />
+                            )}
+                          />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )
             )}
 
             {/* ════ ZONE 3: AI + EXPLORATION ═══════════════════ */}
-            {poll.totalVotes > 0 && (
-              <div className={clsx("bg-gradient-to-br rounded-[20px] p-[1.5px] shadow-[0_4px_16px_rgb(0,0,0,0.04)] animate-in fade-in duration-700", cfg.aiGradient)}>
-                <div className="bg-white rounded-[18px] p-6 md:p-8">
+            {revealStage === 4 && poll.totalVotes > 0 && (
+              <div className={clsx("bg-gradient-to-br rounded-[24px] p-[1.5px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-bottom-6 duration-1000", cfg.aiGradient)}>
+                <div className="bg-white rounded-[22px] p-8 md:p-10">
 
                   {/* AI Section Header context */}
                   <p className="section-eyebrow mb-5">{cfg.aiTitle}</p>
@@ -840,7 +909,7 @@ export default function PollView() {
             )}
 
             {/* ════ IDEA CLOUD ════════════════════════════════ */}
-            {showIdeaCloud ? (
+            {revealStage === 4 && (showIdeaCloud ? (
               <IdeaCloud
                 poll={poll}
                 isPro={isPro}
@@ -867,7 +936,7 @@ export default function PollView() {
                   </p>
                 </div>
               </div>
-            )}
+            ))}
 
           </div>
         )}

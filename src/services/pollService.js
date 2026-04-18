@@ -10,12 +10,38 @@ import {
   orderBy,
   limit,
   onSnapshot,
-  updateDoc
+  deleteDoc,
+  writeBatch,
+  getDocs,
+  where
 } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 
 const POLLS_COL_NAME = 'polls';
 const VOTES_COL_NAME = 'votes';
+
+/**
+ * Truly self-destruct a poll from Firebase.
+ * Deletes the poll doc and all associated vote docs to clear space.
+ */
+export async function deletePoll(pollId) {
+  const pollRef = doc(db, POLLS_COL_NAME, pollId);
+  
+  // 1. Find all associated votes
+  const votesQuery = query(collection(db, VOTES_COL_NAME), where('pollId', '==', pollId));
+  const votesSnap = await getDocs(votesQuery);
+  
+  // 2. Collect all refs to delete
+  const allRefs = [pollRef, ...votesSnap.docs.map(d => d.ref)];
+  
+  // 3. Delete in batches of 500 (Firestore limit)
+  for (let i = 0; i < allRefs.length; i += 500) {
+    const batch = writeBatch(db);
+    const chunk = allRefs.slice(i, i + 500);
+    chunk.forEach(ref => batch.delete(ref));
+    await batch.commit();
+  }
+}
 
 /** 
  * Create a new poll. 

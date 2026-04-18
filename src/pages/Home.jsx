@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { TrendingUp, Clock, Bookmark, X, BookmarkCheck, ArrowRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { subscribeToTrendingPolls } from '../services/pollService';
+import { subscribeToTrendingPolls, deletePoll } from '../services/pollService';
 import { getRecentPolls, getSavedPolls, removeSavedPoll, clearRecentPolls } from '../utils/pollHistory';
 
 // ─── Small helper: relative time label ───────────────────────────────────────
@@ -73,6 +73,14 @@ export default function Home() {
     const unsubscribe = subscribeToTrendingPolls(15, (data) => {
       // Filter out polls that have self-destructed (using local time for efficiency)
       const now = Date.now();
+
+      // Proactive cleanup: Delete expired polls from Firebase to save on limits
+      data.forEach(p => {
+        if (p.selfDestruct && p.expiresAt && p.expiresAt < now) {
+          deletePoll(p.id).catch(console.error);
+        }
+      });
+
       const filtered = data
         .filter(p => !p.selfDestruct || !p.expiresAt || p.expiresAt > now)
         .slice(0, 6); // Keep the top 6 trending
@@ -112,16 +120,25 @@ export default function Home() {
     <div className="space-y-14 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
       {/* ─── Hero ─────────────────────────────────────────────────── */}
-      <div className="text-center space-y-4 py-16">
-        <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 leading-tight">
-          Capture opinions in <br className="hidden md:block"/>
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-indigo-600">
-            real-time.
+      <div className="text-center space-y-6 py-20">
+        <h1 className="text-6xl md:text-7xl font-black tracking-tighter text-slate-900 leading-[0.9]">
+          What's the <br className="hidden md:block"/>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 via-indigo-600 to-primary-500 animate-gradient-x">
+            Verdict?
           </span>
         </h1>
-        <p className="text-lg text-slate-600 max-w-2xl mx-auto pt-2">
-          Create dynamic polls with AI-powered consensus insights. Fast, anonymous, and globally available.
+        <p className="text-xl text-slate-500 max-w-xl mx-auto pt-4 font-medium leading-relaxed">
+          The social judgment system where your opinion meets the crowd. 
+          Discover if you're a visionary or just part of the consensus.
         </p>
+        <div className="pt-6">
+          <Link 
+            to="/create" 
+            className="inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-2xl hover:bg-primary-600 hover:-translate-y-1 transition-all duration-300"
+          >
+            Start a Debate <ArrowRight className="w-5 h-5" />
+          </Link>
+        </div>
       </div>
 
       {/* ─── Recent + Saved side-by-side (only if data exists) ───── */}
@@ -206,7 +223,7 @@ export default function Home() {
             <p className="text-slate-400 text-sm mt-1">Be the first to create one!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {polls.map((poll, i) => (
               <Link
                 key={poll.id}
@@ -214,20 +231,29 @@ export default function Home() {
                 className="block group"
                 style={{ animationDelay: `${i * 60}ms` }}
               >
-                <div className="glass-panel rounded-[20px] p-6 h-full flex flex-col justify-between transition-all duration-300 transform group-hover:-translate-y-2 group-hover:shadow-2xl border border-white/40 group-hover:border-primary-100 bg-white/60 animate-in fade-in duration-500">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-slate-800 line-clamp-3 mb-3 group-hover:text-primary-600 transition-colors leading-snug">
+                <div className="relative overflow-hidden bg-white rounded-[24px] p-7 h-full flex flex-col justify-between transition-all duration-500 transform group-hover:-translate-y-3 group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 group-hover:border-primary-200 animate-in fade-in duration-700">
+                  {/* Subtle Heat Glow for high scores */}
+                  {(poll.trendingScore || 0) > 2 && (
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-rose-400/10 blur-[40px] rounded-full group-hover:bg-rose-400/20 transition-colors duration-500" />
+                  )}
+                  
+                  <div className="flex-1 pb-6">
+                    <div className="mb-4">
+                      <ModePill mode={poll.mode} />
+                    </div>
+                    <h3 className="text-xl font-black text-slate-800 line-clamp-3 group-hover:text-primary-600 transition-colors leading-tight tracking-tight">
                       {poll.title}
                     </h3>
-                    <ModePill mode={poll.mode} />
                   </div>
-                  <div className="flex items-center justify-between text-sm text-slate-500 border-t border-slate-100 pt-4 mt-4">
-                    <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-full text-slate-700 font-medium">
-                       {poll.totalVotes || 0} <span className="font-normal text-slate-500">votes</span>
+
+                  <div className="flex items-center justify-between text-sm border-t border-slate-50 pt-5 mt-auto">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-400">
+                       <span className="text-slate-800">{(poll.totalVotes || 0).toLocaleString()}</span>
+                       <span className="text-[10px] uppercase tracking-wider font-black opacity-50">voters</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-rose-500 font-semibold bg-rose-50 px-3 py-1 rounded-full">
-                      <TrendingUp className="w-4 h-4" />
-                      <span>{(poll.trendingScore || 0).toFixed(1)}</span>
+                    <div className="flex items-center gap-1.5 text-rose-500 font-black bg-rose-50 px-3.5 py-1.5 rounded-xl border border-rose-100/50 shadow-sm transition-all group-hover:scale-110">
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      <span className="text-xs uppercase tracking-tighter">On Fire</span>
                     </div>
                   </div>
                 </div>

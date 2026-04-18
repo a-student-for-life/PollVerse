@@ -103,7 +103,7 @@ function getVis(id, index, weight, maxWeight, isPro) {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default memo(function IdeaCloud({ poll, isPro, onIdeaSubmit, isExpired, isStructured, hasVoted, isCreator, isCommunityLeading, topOptionVotes, communityBadge }) {
+export default memo(function IdeaCloud({ poll, isPro, onIdeaSubmit, isExpired, isStructured, hasVoted, isCreator, isCommunityLeading, topOptionVotes, communityBadge, prompt }) {
   const [inputText, setInputText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [poppingId, setPoppingId]   = useState(null);
@@ -163,17 +163,19 @@ export default memo(function IdeaCloud({ poll, isPro, onIdeaSubmit, isExpired, i
     : 'radial-gradient(ellipse at center, rgba(99,102,241,0.18) 0%, transparent 68%)';
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="rounded-[24px] overflow-hidden shadow-2xl border border-white/5 reveal-dramatic">
 
       {/* ── Section eyebrow label ── */}
       <div className={clsx(
-        'px-5 pt-4 pb-0 flex items-center gap-2',
-        isPro ? 'bg-slate-800/70' : 'bg-[#100e2a]'
+        'px-6 pt-5 pb-0 flex items-center justify-between',
+        isPro ? 'bg-slate-800/80' : 'bg-[#100e2a]'
       )}>
-        <Sparkles className={clsx('w-3.5 h-3.5', isPro ? 'text-slate-400' : 'text-indigo-400')} />
-        <span className={clsx('text-[10px] font-bold uppercase tracking-widest', isPro ? 'text-slate-500' : 'text-indigo-400/70')}>
-          {isPro ? 'Alternative Perspectives' : 'Idea Cloud'}
-        </span>
+        <div className="flex items-center gap-2.5">
+          <Sparkles className={clsx('w-4 h-4', isPro ? 'text-slate-400' : 'text-indigo-400')} />
+          <span className={clsx('text-[11px] font-black uppercase tracking-[0.2em]', isPro ? 'text-slate-500' : 'text-indigo-400/80')}>
+            {isPro ? 'Evidence of Alternative Thinking' : 'The Idea Cloud'}
+          </span>
+        </div>
       </div>
 
       {/* ── Community Leading Banner ── */}
@@ -181,62 +183,51 @@ export default memo(function IdeaCloud({ poll, isPro, onIdeaSubmit, isExpired, i
         <CommunityLeadingBanner isPro={isPro} topIdea={topIdea} communityBadge={communityBadge} />
       )}
 
-      {/* ── Structured gate: must vote before contributing ideas ── */}
-      {isStructured && !hasVoted && !isCreator && (
-        <div className={clsx('px-5 py-3 border-b', isPro ? 'bg-slate-800/70 border-slate-700/50' : 'bg-[#100e2a] border-indigo-900/40')}>
-          <p className={clsx('text-xs font-semibold', isPro ? 'text-slate-400' : 'text-indigo-300/70')}>
-            🔒 Vote first to contribute an idea
-          </p>
-        </div>
-      )}
-
-      {/* ── Input Row (always rendered but disabled when structured+not-voted) ── */}
+      {/* ── Input Row ── */}
       <div className={clsx(
-        'px-5 py-3 flex items-center gap-3 border-b',
-        isPro ? 'bg-slate-800/70 border-slate-700/50' : 'bg-[#100e2a] border-indigo-900/40'
+        'px-6 py-4 flex items-center gap-4 border-b transition-colors',
+        isPro ? 'bg-slate-800/80 border-slate-700/50' : 'bg-[#100e2a] border-indigo-900/40'
       )}>
-        <p className={clsx('text-xs font-semibold shrink-0', isPro ? 'text-slate-400' : 'text-indigo-300/80')}>
-          Different take?
+        <p className={clsx('text-[13px] font-bold shrink-0', isPro ? 'text-slate-400' : 'text-indigo-300/80')}>
+          {prompt || (isPro ? 'Propose a perspective:' : 'Drop a better idea:')}
         </p>
         <input
           type="text"
           value={inputText}
           onChange={e => { setInputText(e.target.value.slice(0, 40)); setSubmitError(''); }}
           onKeyDown={e => e.key === 'Enter' && !isSubmitting && !isExpired && handleSubmit()}
-          placeholder={isExpired ? "Poll exploded — taking closed" : submitted ? "You've already submitted one" : 'Type a short idea... (40 chars)'}
+          placeholder={isExpired ? "Poll exploded" : submitted ? "Take recorded" : 'Type here...'}
           disabled={submitted || isSubmitting || isExpired || (isStructured && !hasVoted && !isCreator)}
           maxLength={40}
           className={clsx(
-            'flex-1 bg-transparent outline-none text-sm min-w-0 placeholder:opacity-40',
+            'flex-1 bg-transparent outline-none text-[14px] min-w-0 placeholder:opacity-30 font-medium',
             isPro ? 'text-slate-300 placeholder-slate-500' : 'text-indigo-100 placeholder-indigo-400'
           )}
         />
-        <span className={clsx('text-[10px] font-mono shrink-0', inputText.length > 35 ? 'text-rose-400' : 'text-slate-600')}>
-          {inputText.length}/40
-        </span>
         <button
           onClick={handleSubmit}
           disabled={!inputText.trim() || submitted || isSubmitting || isExpired || (isStructured && !hasVoted && !isCreator)}
           className={clsx(
-            'shrink-0 text-xs font-bold px-3.5 py-1.5 rounded-xl transition-all duration-150',
+            'shrink-0 text-[11px] font-black uppercase tracking-wider px-4 py-2 rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-20',
             isPro
-              ? 'bg-slate-600 hover:bg-slate-500 text-white disabled:opacity-25 disabled:cursor-not-allowed'
-              : 'bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white shadow-lg shadow-indigo-900/60 disabled:opacity-25 disabled:cursor-not-allowed'
+              ? 'bg-slate-600 hover:bg-slate-500 text-white'
+              : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/40'
           )}
         >
-          {isSubmitting ? '…' : 'Add'}
+          {isSubmitting ? '...' : 'Add'}
         </button>
       </div>
 
       {/* Error row */}
       {submitError && (
-        <div className={clsx('px-5 py-2 text-xs font-semibold text-rose-400', isPro ? 'bg-slate-800/70' : 'bg-[#100e2a]')}>
+        <div className={clsx('px-6 py-2 text-[11px] font-bold text-rose-400', isPro ? 'bg-slate-800/80' : 'bg-[#100e2a]')}>
           {submitError}
         </div>
       )}
 
       {/* ── Cloud Stage ── */}
-      <div style={{ position: 'relative', height: '272px', background: stageBg, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', height: '300px', background: stageBg, overflow: 'hidden' }}>
+
 
         {/* Ambient center glow (CSS only) */}
         <div style={{
@@ -300,3 +291,24 @@ export default memo(function IdeaCloud({ poll, isPro, onIdeaSubmit, isExpired, i
     </div>
   );
 });
+
+function CommunityLeadingBanner({ isPro, topIdea, communityBadge }) {
+  return (
+    <div className={clsx(
+      "px-6 py-3 border-b flex items-center gap-3 animate-in slide-in-from-top-2 duration-500",
+      isPro ? "bg-slate-800 border-slate-700" : "bg-indigo-950 border-indigo-900"
+    )}>
+      <div className="flex-1 min-w-0">
+        <p className={clsx("text-[10px] font-black uppercase tracking-widest mb-0.5", isPro ? "text-slate-500" : "text-indigo-400")}>
+          Community Leading Option
+        </p>
+        <p className={clsx("text-sm font-bold truncate", isPro ? "text-slate-200" : "text-white")}>
+          "{topIdea.text}"
+        </p>
+      </div>
+      <div className={clsx("px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shrink-0", isPro ? "bg-slate-700 text-slate-300" : "bg-indigo-600 text-indigo-100")}>
+        {communityBadge || 'Leading'}
+      </div>
+    </div>
+  );
+}
