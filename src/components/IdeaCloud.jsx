@@ -128,7 +128,8 @@ function getChipStyle(id, weight, maxWeight, isPro) {
 export default memo(function IdeaCloud({
   poll, isPro, onIdeaSubmit,
   isExpired, isStructured, hasVoted, isCreator,
-  isCommunityLeading, communityBadge,
+  isCommunityLeading, isIdeaTied, tiedIdeas,
+  communityBadge,
 }) {
   const [inputText,   setInputText]   = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -147,7 +148,7 @@ export default memo(function IdeaCloud({
 
   const ideas     = poll.ideaCloud || [];
   const maxWeight = ideas.length > 0 ? Math.max(...ideas.map(i => i.weight)) : 1;
-  const topIdea   = isCommunityLeading && ideas.length > 0
+  const topIdea   = isCommunityLeading && !isIdeaTied && ideas.length > 0
     ? ideas.reduce((a, b) => b.weight > a.weight ? b : a)
     : null;
 
@@ -243,6 +244,9 @@ export default memo(function IdeaCloud({
       </div>
 
       {/* ── Community Leading Banner ── */}
+      {isIdeaTied && tiedIdeas?.length > 1 && tiedIdeas[0].weight > 0 && (
+        <CommunityTiedBanner isPro={isPro} tiedIdeas={tiedIdeas} />
+      )}
       {isCommunityLeading && topIdea && (
         <CommunityLeadingBanner isPro={isPro} topIdea={topIdea} communityBadge={communityBadge} />
       )}
@@ -498,6 +502,29 @@ function DesktopCloud({ ideas, maxWeight, isPro, topIdea, isCommunityLeading, po
         pointerEvents: 'none',
       }}>
         click to agree
+      </div>
+    </div>
+  );
+}
+
+// ─── Community Tied Banner ─────────────────────────────────────────────────────
+function CommunityTiedBanner({ isPro, tiedIdeas }) {
+  const names = tiedIdeas.slice(0, 3).map(i => `"${i.text}"`).join(' · ');
+  return (
+    <div className={clsx(
+      'px-6 py-3 border-b flex items-center gap-3 animate-in slide-in-from-top-2 duration-500',
+      isPro ? 'bg-slate-800 border-slate-700' : 'bg-amber-950/60 border-amber-900/50'
+    )}>
+      <div className="flex-1 min-w-0">
+        <p className={clsx('text-[10px] font-black uppercase tracking-widest mb-0.5', isPro ? 'text-slate-500' : 'text-amber-400')}>
+          Community — It's a Tie
+        </p>
+        <p className={clsx('text-sm font-bold truncate', isPro ? 'text-slate-200' : 'text-white')}>
+          {names}
+        </p>
+      </div>
+      <div className={clsx('px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shrink-0', isPro ? 'bg-slate-700 text-slate-300' : 'bg-amber-600/80 text-amber-100')}>
+        Tied
       </div>
     </div>
   );

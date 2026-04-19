@@ -570,7 +570,10 @@ export default function PollView() {
   const topOptionVotes = poll.options.length > 0
     ? Math.max(...poll.options.map(o => o.voteCount))
     : 0;
-  const topIdea = ideas.length > 0
+  const topIdeaWeight = ideas.length > 0 ? Math.max(...ideas.map(i => i.weight)) : 0;
+  const topTiedIdeas = ideas.filter(i => i.weight === topIdeaWeight);
+  const isIdeaTied = topTiedIdeas.length > 1;
+  const topIdea = !isIdeaTied && ideas.length > 0
     ? ideas.reduce((a, b) => b.weight > a.weight ? b : a)
     : null;
   const isCommunityLeading = topIdea && topOptionVotes > 0 && topIdea.weight > topOptionVotes;
@@ -950,6 +953,8 @@ export default function PollView() {
                 hasVoted={hasVoted}
                 isCreator={isCreator}
                 isCommunityLeading={isCommunityLeading}
+                isIdeaTied={isIdeaTied}
+                tiedIdeas={topTiedIdeas}
                 topOptionVotes={topOptionVotes}
                 communityBadge={cfg.communityBadge}
                 onIdeaSubmit={() => setHasSubmittedIdea(true)}
