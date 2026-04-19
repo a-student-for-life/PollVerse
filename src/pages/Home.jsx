@@ -71,8 +71,8 @@ const MODES = [
     tagline: 'Drop hot takes & browse freely',
     features: [
       { label: '100% anonymous', ok: true },
-      { label: 'Idea cloud active', ok: true },
-      { label: 'Skip voting allowed', ok: true },
+      { label: 'Idea cloud on', ok: true },
+      { label: 'Browse without voting', ok: true },
     ],
     hoverCls: 'hover:border-orange-500/40 hover:shadow-[0_8px_40px_rgba(249,115,22,0.12)]',
   },
@@ -82,9 +82,9 @@ const MODES = [
     part: 'Open', partIcon: '🔓',
     tagline: 'Verified insights, open results',
     features: [
-      { label: 'Requires Google sign-in', ok: false },
-      { label: 'Idea cloud active', ok: true },
-      { label: 'Skip voting allowed', ok: true },
+      { label: 'Verified identity required', ok: false },
+      { label: 'Idea cloud on', ok: true },
+      { label: 'Browse without voting', ok: true },
     ],
     hoverCls: 'hover:border-sky-500/40 hover:shadow-[0_8px_40px_rgba(14,165,233,0.12)]',
   },
@@ -95,8 +95,8 @@ const MODES = [
     tagline: 'Vote first, crowd unlocked after',
     features: [
       { label: '100% anonymous', ok: true },
-      { label: 'Idea cloud active', ok: true },
-      { label: 'Must vote to see results', ok: false },
+      { label: 'Idea cloud on', ok: true },
+      { label: 'Vote required to view', ok: false },
     ],
     hoverCls: 'hover:border-orange-500/40 hover:shadow-[0_8px_40px_rgba(249,115,22,0.12)]',
   },
@@ -106,9 +106,9 @@ const MODES = [
     part: 'Structured', partIcon: '🔒',
     tagline: 'Gold standard. No shortcuts.',
     features: [
-      { label: 'Requires Google sign-in', ok: false },
-      { label: 'Idea cloud disabled', ok: false },
-      { label: 'Must vote to see results', ok: false },
+      { label: 'Verified identity required', ok: false },
+      { label: 'Community ideas off', ok: false },
+      { label: 'Vote required to view', ok: false },
     ],
     hoverCls: 'hover:border-indigo-500/40 hover:shadow-[0_8px_40px_rgba(99,102,241,0.15)]',
     special: true,
@@ -118,8 +118,12 @@ const MODES = [
 function ModeCard({ config, cardIndex }) {
   return (
     <div
-      className={`group relative overflow-hidden rounded-[20px] p-4 sm:p-5 border border-white/5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 ${config.hoverCls} ${config.special ? 'bg-indigo-950/30' : 'bg-slate-900/40'}`}
-      style={{ animationDelay: `${cardIndex * 90}ms`, animationFillMode: 'both', animationDuration: '500ms' }}
+      className={`group relative overflow-hidden rounded-[20px] p-4 sm:p-5 border border-white/5 transition-all duration-300 ${config.hoverCls} ${config.special ? 'bg-indigo-950/30' : 'bg-slate-900/40'}`}
+      style={{
+        opacity: 0,
+        animation: `fadeSlideUp 0.5s ease forwards`,
+        animationDelay: `${cardIndex * 90}ms`,
+      }}
     >
       <div className="flex items-center justify-between mb-3">
         <span className={`text-[10px] font-black uppercase tracking-widest ${config.modeClass}`}>
@@ -136,13 +140,17 @@ function ModeCard({ config, cardIndex }) {
         {config.features.map((f, fi) => (
           <div
             key={fi}
-            className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2"
-            style={{ animationDelay: `${cardIndex * 90 + 220 + fi * 55}ms`, animationFillMode: 'both', animationDuration: '300ms' }}
+            className="flex items-center gap-2"
+            style={{
+              opacity: 0,
+              animation: `fadeSlideLeft 0.3s ease forwards`,
+              animationDelay: `${cardIndex * 90 + 240 + fi * 60}ms`,
+            }}
           >
-            <span className={`text-xs font-black w-3 shrink-0 ${f.ok ? 'text-emerald-400' : 'text-slate-600'}`}>
-              {f.ok ? '✓' : '✕'}
+            <span className={`text-xs font-black w-3 shrink-0 leading-none ${f.ok ? 'text-emerald-400' : 'text-amber-500/70'}`}>
+              {f.ok ? '✓' : '—'}
             </span>
-            <span className={`text-[11px] ${f.ok ? 'text-slate-300 font-semibold' : 'text-slate-600 font-medium line-through decoration-slate-700'}`}>
+            <span className={`text-[11px] font-semibold leading-none ${f.ok ? 'text-slate-200' : 'text-amber-400/60'}`}>
               {f.label}
             </span>
           </div>
