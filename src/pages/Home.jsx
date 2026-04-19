@@ -62,6 +62,102 @@ function HistoryCard({ poll, onRemove, showTime, timeKey }) {
   );
 }
 
+// ─── Mode Explorer ───────────────────────────────────────────────────────────
+const MODES = [
+  {
+    id: 'social-open',
+    mode: 'Social', modeIcon: '🔥', modeClass: 'text-orange-400',
+    part: 'Open', partIcon: '🔓',
+    tagline: 'Drop hot takes & browse freely',
+    features: [
+      { label: '100% anonymous', ok: true },
+      { label: 'Idea cloud active', ok: true },
+      { label: 'Skip voting allowed', ok: true },
+    ],
+    hoverCls: 'hover:border-orange-500/40 hover:shadow-[0_8px_40px_rgba(249,115,22,0.12)]',
+  },
+  {
+    id: 'pro-open',
+    mode: 'Professional', modeIcon: '📊', modeClass: 'text-sky-400',
+    part: 'Open', partIcon: '🔓',
+    tagline: 'Verified insights, open results',
+    features: [
+      { label: 'Requires Google sign-in', ok: false },
+      { label: 'Idea cloud active', ok: true },
+      { label: 'Skip voting allowed', ok: true },
+    ],
+    hoverCls: 'hover:border-sky-500/40 hover:shadow-[0_8px_40px_rgba(14,165,233,0.12)]',
+  },
+  {
+    id: 'social-structured',
+    mode: 'Social', modeIcon: '🔥', modeClass: 'text-orange-400',
+    part: 'Structured', partIcon: '🔒',
+    tagline: 'Vote first, crowd unlocked after',
+    features: [
+      { label: '100% anonymous', ok: true },
+      { label: 'Idea cloud active', ok: true },
+      { label: 'Must vote to see results', ok: false },
+    ],
+    hoverCls: 'hover:border-orange-500/40 hover:shadow-[0_8px_40px_rgba(249,115,22,0.12)]',
+  },
+  {
+    id: 'pro-structured',
+    mode: 'Professional', modeIcon: '📊', modeClass: 'text-sky-400',
+    part: 'Structured', partIcon: '🔒',
+    tagline: 'Gold standard. No shortcuts.',
+    features: [
+      { label: 'Requires Google sign-in', ok: false },
+      { label: 'Idea cloud disabled', ok: false },
+      { label: 'Must vote to see results', ok: false },
+    ],
+    hoverCls: 'hover:border-indigo-500/40 hover:shadow-[0_8px_40px_rgba(99,102,241,0.15)]',
+    special: true,
+  },
+];
+
+function ModeCard({ config, cardIndex }) {
+  return (
+    <div
+      className={`group relative overflow-hidden rounded-[20px] p-4 sm:p-5 border border-white/5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 ${config.hoverCls} ${config.special ? 'bg-indigo-950/30' : 'bg-slate-900/40'}`}
+      style={{ animationDelay: `${cardIndex * 90}ms`, animationFillMode: 'both', animationDuration: '500ms' }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <span className={`text-[10px] font-black uppercase tracking-widest ${config.modeClass}`}>
+          {config.modeIcon} {config.mode}
+        </span>
+        <span className="text-[9px] font-bold text-slate-500 bg-slate-800/80 px-2 py-0.5 rounded-full whitespace-nowrap">
+          {config.partIcon} {config.part}
+        </span>
+      </div>
+
+      <p className="text-xs sm:text-sm font-bold text-slate-200 mb-3 leading-tight">{config.tagline}</p>
+
+      <div className="space-y-1.5">
+        {config.features.map((f, fi) => (
+          <div
+            key={fi}
+            className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2"
+            style={{ animationDelay: `${cardIndex * 90 + 220 + fi * 55}ms`, animationFillMode: 'both', animationDuration: '300ms' }}
+          >
+            <span className={`text-xs font-black w-3 shrink-0 ${f.ok ? 'text-emerald-400' : 'text-slate-600'}`}>
+              {f.ok ? '✓' : '✕'}
+            </span>
+            <span className={`text-[11px] ${f.ok ? 'text-slate-300 font-semibold' : 'text-slate-600 font-medium line-through decoration-slate-700'}`}>
+              {f.label}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {config.special && (
+        <div className="mt-3 inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-full border border-indigo-500/20">
+          ⭐ Most rigorous
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Home() {
   const [polls, setPolls]           = useState([]);
@@ -125,70 +221,14 @@ export default function Home() {
           matches the crowd — with modes for every level of privacy.
         </p>
 
-        {/* ─── Modes Visual Diagram ─── */}
-        <div className="pt-16 max-w-4xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Social Header */}
-            <div className="hidden md:flex flex-col items-center justify-center p-4">
-              <div className="text-2xl mb-1">🔥</div>
-              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-orange-500">Social Mode</h3>
-              <p className="text-[10px] text-slate-500 font-bold">100% Anonymous</p>
-            </div>
-            {/* Pro Header */}
-            <div className="hidden md:flex flex-col items-center justify-center p-4">
-              <div className="text-2xl mb-1">📊</div>
-              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-sky-500">Professional Mode</h3>
-              <p className="text-[10px] text-slate-500 font-bold">Verified Identity</p>
-            </div>
-
-            {/* Matrix Cells */}
-            <div className="group relative overflow-hidden bg-slate-900/40 border border-white/5 p-6 rounded-[24px] hover:border-orange-500/30 transition-all">
-              <div className="md:hidden flex items-center gap-2 mb-4">
-                <span className="text-orange-500 font-black text-[10px] uppercase">Social</span>
-                <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
-                <span className="text-slate-500 font-black text-[10px] uppercase">Open</span>
-              </div>
-              <div className="text-left">
-                <h4 className="text-white font-black tracking-tight mb-1">Open Participation</h4>
-                <p className="text-xs text-slate-500 font-medium">Browse results instantly. Perfect for viral debates and quick opinions.</p>
-              </div>
-            </div>
-
-            <div className="group relative overflow-hidden bg-slate-900/40 border border-white/5 p-6 rounded-[24px] hover:border-sky-500/30 transition-all">
-              <div className="md:hidden flex items-center gap-2 mb-4">
-                <span className="text-sky-500 font-black text-[10px] uppercase">Professional</span>
-                <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
-                <span className="text-slate-500 font-black text-[10px] uppercase">Open</span>
-              </div>
-              <div className="text-left">
-                <h4 className="text-white font-black tracking-tight mb-1">Open Feedback</h4>
-                <p className="text-xs text-slate-500 font-medium">Transparent insights. Great for team surveys and documented consensus.</p>
-              </div>
-            </div>
-
-            <div className="group relative overflow-hidden bg-slate-900/40 border border-white/5 p-6 rounded-[24px] hover:border-orange-500/30 transition-all">
-              <div className="md:hidden flex items-center gap-2 mb-4">
-                <span className="text-orange-500 font-black text-[10px] uppercase">Social</span>
-                <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
-                <span className="text-slate-500 font-black text-[10px] uppercase">Structured</span>
-              </div>
-              <div className="text-left">
-                <h4 className="text-white font-black tracking-tight mb-1">Forced Reveal</h4>
-                <p className="text-xs text-slate-500 font-medium">Vote first to see results. Eliminates bias for unfiltered hot takes.</p>
-              </div>
-            </div>
-
-            <div className="group relative overflow-hidden bg-slate-900/40 border border-white/5 p-6 rounded-[24px] hover:border-sky-500/30 transition-all">
-              <div className="md:hidden flex items-center gap-2 mb-4">
-                <span className="text-sky-500 font-black text-[10px] uppercase">Professional</span>
-                <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
-                <span className="text-slate-500 font-black text-[10px] uppercase">Structured</span>
-              </div>
-              <div className="text-left">
-                <h4 className="text-white font-black tracking-tight mb-1">Double Blind</h4>
-                <p className="text-xs text-slate-500 font-medium">The gold standard for work. Ensure independent, verified perspectives.</p>
-              </div>
-            </div>
+        {/* ─── Modes Explorer ─── */}
+        <div className="pt-16 max-w-3xl mx-auto px-4">
+          <p className="section-eyebrow text-center mb-2">Four ways to poll</p>
+          <p className="text-slate-500 text-sm text-center mb-8 font-medium">Mix mode &amp; participation to match your use case</p>
+          <div className="grid grid-cols-2 gap-3">
+            {MODES.map((config, i) => (
+              <ModeCard key={config.id} config={config} cardIndex={i} />
+            ))}
           </div>
         </div>
 
