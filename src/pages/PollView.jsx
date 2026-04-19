@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
-import { Sparkles, MessageSquareQuote, CheckCircle2, Loader2, Copy, ShieldCheck, Bookmark, BookmarkCheck, Users, Trophy, Timer, ArrowRight, Send } from 'lucide-react';
+import { Sparkles, MessageSquareQuote, CheckCircle2, Loader2, Copy, ShieldCheck, Bookmark, BookmarkCheck, Users, Trophy, Timer, ArrowRight, Send, LogIn, Lock } from 'lucide-react';
 import clsx from 'clsx';
-import { subscribeToPoll, voteOnPoll, hasUserVoted, getUserVote, getOrSignInUser, saveAiSummary, addReaction, removeReaction, revealCorrectAnswer } from '../services/pollService';
+import { subscribeToPoll, voteOnPoll, hasUserVoted, getUserVote, getOrSignInUser, saveAiSummary, addReaction, removeReaction, revealCorrectAnswer, deletePoll, signInWithGoogle, isUserVerified } from '../services/pollService';
 import { trackRecentPoll, isPollSaved, toggleSavedPoll } from '../utils/pollHistory';
 import IdeaCloud from '../components/IdeaCloud';
 
@@ -160,25 +160,30 @@ function CorrectnessCard({ poll, selectedOption, isCreator, isRevealed, now, onR
   // Pre-reveal: Creator sees the answer with a Manual Reveal button
   if (isCreator && !isRevealed) {
     return (
-      <div className="rounded-[20px] border border-dashed border-emerald-200 bg-emerald-50/20 p-5 flex flex-col gap-4 animate-in fade-in duration-500">
-        <div className="flex items-center gap-3">
-          <Trophy className="w-5 h-5 text-emerald-400 shrink-0" />
+      <div className="rounded-[24px] border-2 border-dashed border-emerald-500/30 bg-slate-900/40 backdrop-blur-xl p-6 flex flex-col gap-5 animate-in fade-in duration-500 shadow-2xl">
+        <div className="flex items-center gap-4">
+          <div className="bg-emerald-500/20 p-2.5 rounded-xl border border-emerald-500/20">
+            <Trophy className="w-5 h-5 text-emerald-400 shrink-0" />
+          </div>
           <div className="flex-1">
-            <p className="section-eyebrow mb-1">Answer Reveal Pending</p>
-            <p className="text-sm font-bold text-slate-700">Correct: <span className="text-emerald-700 font-extrabold">{correctOption.text}</span></p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Answer Reveal Pending</p>
+            <p className="text-sm font-bold text-slate-200">Correct: <span className="text-emerald-400 font-black uppercase tracking-tight">{correctOption.text}</span></p>
           </div>
         </div>
-        <div className="flex items-center gap-3 pt-2">
+        <div className="flex items-center gap-4 pt-2">
           <button
             onClick={onRevealNow}
-            className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 group"
+            className="flex-1 py-4 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-[0_0_30px_rgba(16,185,129,0.2)] transition-all flex items-center justify-center gap-3 group"
           >
             Drumroll... Reveal Now 🥁
           </button>
           {poll.revealAt && (
-             <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wide">
-               <Timer className="w-3.5 h-3.5" />
-               {formatTimeLeft(poll.revealAt - now)}
+             <div className="flex flex-col items-end">
+               <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Auto-reveal</span>
+               <div className="flex items-center gap-1.5 text-xs font-black text-emerald-400 tabular-nums">
+                 <Timer className="w-3.5 h-3.5" />
+                 {formatTimeLeft(poll.revealAt - now)}
+               </div>
              </div>
           )}
         </div>
@@ -189,13 +194,13 @@ function CorrectnessCard({ poll, selectedOption, isCreator, isRevealed, now, onR
   // Pre-reveal: Participants see a mystery card
   if (!isRevealed && !isCreator) {
     return (
-      <div className="rounded-[20px] border border-slate-200 bg-slate-100 p-6 flex flex-col items-center justify-center text-center gap-4 reveal-mystery shadow-sm">
-        <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center text-2xl shadow-inner animate-pulse">
+      <div className="rounded-[24px] border-2 border-slate-800 bg-slate-950/40 backdrop-blur-xl p-8 flex flex-col items-center justify-center text-center gap-5 reveal-mystery shadow-2xl">
+        <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center text-3xl shadow-inner border border-white/5 animate-pulse">
           🤫
         </div>
         <div>
-          <p className="text-lg font-extrabold text-slate-800">Mystery Answer</p>
-          <p className="text-xs text-slate-400 font-semibold uppercase tracking-widest mt-1">
+          <p className="text-xl font-black text-slate-100 tracking-tight">Mystery Answer</p>
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-2">
             {poll.revealAt 
               ? `Reveals in ${formatTimeLeft(poll.revealAt - now)}` 
               : "Waiting for creator reveal"}
@@ -210,14 +215,14 @@ function CorrectnessCard({ poll, selectedOption, isCreator, isRevealed, now, onR
 
   if (isCorrect) {
     return (
-      <div className="relative overflow-hidden rounded-[20px] border border-emerald-500/30 bg-emerald-50/40 p-6 flex items-center gap-5 reveal-dramatic">
+      <div className="relative overflow-hidden rounded-[24px] border-2 border-emerald-500/30 bg-emerald-950/20 backdrop-blur-xl p-7 flex items-center gap-6 reveal-dramatic shadow-2xl">
         <RevealConfetti />
-        <div className="bg-emerald-500 rounded-full p-2.5 shrink-0 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-          <CheckCircle2 className="w-6 h-6 text-white" />
+        <div className="bg-emerald-500 rounded-full p-3 shrink-0 shadow-[0_0_30px_rgba(16,185,129,0.4)]">
+          <CheckCircle2 className="w-7 h-7 text-slate-950" />
         </div>
         <div>
-          <p className="text-xl font-black text-emerald-950 mb-1 leading-none uppercase tracking-tighter">Perfecto! 🏆</p>
-          <p className="text-sm text-emerald-800/80 font-medium">
+          <p className="text-2xl font-black text-emerald-400 mb-1 leading-none uppercase tracking-tighter drop-shadow-lg">Perfecto! 🏆</p>
+          <p className="text-sm text-slate-300 font-bold leading-relaxed">
             You nailed it. {pctCorrect}% of the crowd was as sharp as you.
           </p>
         </div>
@@ -227,23 +232,23 @@ function CorrectnessCard({ poll, selectedOption, isCreator, isRevealed, now, onR
 
   return (
     <div className={clsx(
-      "relative overflow-hidden rounded-[20px] border p-6 reveal-dramatic",
-      selectedOption ? "bg-orange-50/40 border-orange-200" : "bg-slate-50 border-slate-200"
+      "relative overflow-hidden rounded-[24px] border-2 p-7 reveal-dramatic backdrop-blur-xl shadow-2xl",
+      selectedOption ? "bg-rose-950/20 border-rose-500/20" : "bg-slate-950/40 border-slate-800"
     )}>
       {isRevealed && <RevealConfetti />}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-5">
         <div className={clsx(
-          "rounded-full w-12 h-12 flex items-center justify-center shrink-0 shadow-sm border text-xl",
-          selectedOption ? "bg-white border-orange-100" : "bg-white border-slate-100"
+          "rounded-full w-14 h-14 flex items-center justify-center shrink-0 shadow-lg border-2 text-2xl bg-slate-900",
+          selectedOption ? "border-rose-900/50" : "border-slate-800"
         )}>
            {selectedOption ? "❌" : "💡"}
         </div>
         <div>
-          <p className="text-base font-extrabold text-slate-800 mb-0.5">
+          <p className="text-lg font-black text-slate-100 tracking-tight mb-1">
             {selectedOption ? "Not quite this time" : "The Correct Answer"}
           </p>
-          <p className="text-sm text-slate-600">
-            The secret is out: <span className="font-black text-slate-900 underline decoration-slate-300 decoration-2 underline-offset-4">{correctOption.text}</span>
+          <p className="text-sm text-slate-400 font-medium">
+            The secret is out: <span className="font-black text-white underline decoration-emerald-500/50 decoration-2 underline-offset-4 uppercase tracking-tight">{correctOption.text}</span>
           </p>
         </div>
       </div>
@@ -251,23 +256,25 @@ function CorrectnessCard({ poll, selectedOption, isCreator, isRevealed, now, onR
   );
 }
 
-// ─── Custom Bar Label showing "← You" ────────────────────────────────────────
-// NOTE: Recharts LabelList spreads each data entry's fields directly onto props.
+// ─── Custom Bar Label: percentage + "← You" marker ──────────────────────────
+// Recharts LabelList spreads each data entry's fields directly onto props.
 // So `props.id` gives the option's id — NOT `props.payload.id`.
-function YouLabel(props) {
-  const { x, y, width, height, value, selectedOption, id } = props;
-  if (!id || id !== selectedOption || !value) return null;
+function BarLabel(props) {
+  const { x, y, width, height, value, selectedOption, id, totalVotes } = props;
+  if (!value || !totalVotes) return null;
+  const pct = Math.round((value / totalVotes) * 100);
+  const isYou = id && id === selectedOption;
   return (
     <g>
       <text
         x={x + width + 8}
         y={y + height / 2}
-        fill="#4f46e5"
+        fill={isYou ? '#4f46e5' : '#64748b'}
         fontSize={12}
         fontWeight={800}
         dominantBaseline="middle"
       >
-        ← You
+        {pct}%{isYou ? ' ← You' : ''}
       </text>
     </g>
   );
@@ -276,6 +283,7 @@ function YouLabel(props) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PollView() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [poll, setPoll]           = useState(null);
   const [loading, setLoading]     = useState(true);
   const [currentUid, setCurrentUid] = useState(null);
@@ -288,7 +296,9 @@ export default function PollView() {
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiError, setAiError]     = useState('');
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedVerdict, setCopiedVerdict] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
+
   const [myReactions, setMyReactions] = useState(() => {
     try { return JSON.parse(localStorage.getItem(`rxd_${id}`) || '{}'); } catch { return {}; }
   });
@@ -329,11 +339,16 @@ export default function PollView() {
   }, []);
 
   // Proactive self-destruct cleanup
+  const [isDeleting, setIsDeleting] = useState(false);
   useEffect(() => {
-    if (poll?.selfDestruct && poll?.expiresAt && poll.expiresAt < now) {
-      deletePoll(id).catch(console.error);
+    if (poll?.selfDestruct && poll?.expiresAt && poll.expiresAt < now && !isDeleting) {
+      setIsDeleting(true);
+      deletePoll(id).catch(err => {
+        console.error(err);
+        setIsDeleting(false);
+      });
     }
-  }, [poll, now, id]);
+  }, [poll, now, id, isDeleting]);
 
   useEffect(() => {
     setLoading(true);
@@ -362,6 +377,42 @@ export default function PollView() {
   useEffect(() => {
     if (poll && currentUid) setIsCreator(poll.creatorId === currentUid);
   }, [poll, currentUid]);
+
+  const handleGoBack = () => {
+    navigate('/', { replace: true });
+  };
+
+  const handleCopyVerdict = () => {
+    if (!poll || !selectedOption) return;
+    
+    const userOption = poll.options.find(o => o.id === selectedOption);
+    const winner = poll.options.reduce((a, b) => (b.voteCount > a.voteCount ? b : a));
+    const userPct = Math.round((userOption.voteCount / poll.totalVotes) * 100);
+    const isMajority = userOption.id === winner.id;
+    const isCorrect = poll.correctOptionId ? selectedOption === poll.correctOptionId : null;
+    
+    let text = `⚖️ Verdict is IN for: "${poll.title}"\n\n`;
+    
+    if (isCorrect !== null) {
+      text += isCorrect ? `✅ I NAILED IT! ` : `❌ I MISSED IT! `;
+      text += `The truth is: ${poll.options.find(o => o.id === poll.correctOptionId).text}\n\n`;
+    }
+
+    text += `🧠 My take: "${userOption.text}"\n`;
+    text += `📊 Crowd alignment: ${userPct}% (${isMajority ? 'I\'m with the CONSENSUS 🙌' : 'I\'m a VISIONARY 👀'})\n\n`;
+    text += `What's your verdict? Debate here 👇\n${window.location.href}`;
+    
+    navigator.clipboard.writeText(text);
+    setCopiedVerdict(true);
+    setTimeout(() => setCopiedVerdict(false), 2000);
+  };
+
+  const handleCopyInsight = () => {
+    if (!poll?.aiSummary) return;
+    navigator.clipboard.writeText(`🤖 AI Insight on "${poll.title}":\n\n"${poll.aiSummary}"\n\nGet the full verdict at: ${window.location.href}`);
+    setCopiedVerdict(true); // Re-use the feedback state
+    setTimeout(() => setCopiedVerdict(false), 2000);
+  };
 
   const mode = poll?.mode === 'professional' ? 'professional' : 'social';
   const cfg  = MODE_CONFIG[mode];
@@ -436,26 +487,37 @@ export default function PollView() {
     setIsBookmarked(toggleSavedPoll(poll));
   };
 
-  const handleReaction = async (reasonIndex, reactionKey) => {
-    const stateKey = `${reasonIndex}_${reactionKey}`;
+  const handleReaction = async (reasonTimestamp, reactionKey, event) => {
+    // Floating bubble logic
+    if (event) {
+      const bubble = document.createElement('div');
+      bubble.className = 'reaction-bubble text-2xl z-[9999] fixed';
+      bubble.innerText = cfg.reactions.find(r => r.key === reactionKey)?.emoji || '✨';
+      bubble.style.left = `${event.clientX}px`;
+      bubble.style.top = `${event.clientY}px`;
+      document.body.appendChild(bubble);
+      setTimeout(() => bubble.remove(), 800);
+    }
+
+    // Key by timestamp (stable) — not by array index which shifts as FIFO buffer rotates
+    const stateKey = `${reasonTimestamp}_${reactionKey}`;
     const hasReacted = !!myReactions[stateKey];
-    
-    // Toggle state
+
     const updated = { ...myReactions };
     if (hasReacted) {
       delete updated[stateKey];
     } else {
       updated[stateKey] = true;
     }
-    
+
     setMyReactions(updated);
     try { localStorage.setItem(`rxd_${id}`, JSON.stringify(updated)); } catch {}
 
     try {
       if (hasReacted) {
-        await removeReaction(id, reasonIndex, reactionKey);
+        await removeReaction(id, reasonTimestamp, reactionKey);
       } else {
-        await addReaction(id, reasonIndex, reactionKey);
+        await addReaction(id, reasonTimestamp, reactionKey);
       }
     } catch (err) {
       console.error('Reaction update failed:', err);
@@ -475,7 +537,26 @@ export default function PollView() {
       </div>
     );
   }
-  if (!poll) return <div className="text-center text-xl py-20 text-slate-500 font-bold">Poll not found.</div>;
+  if (!poll) return (
+    <div className="max-w-2xl mx-auto py-20 px-4 animate-in fade-in duration-700">
+      <div className="bg-slate-900/60 backdrop-blur-2xl rounded-[32px] p-12 text-center border border-white/10 shadow-2xl relative overflow-hidden">
+        <div className="absolute -top-24 -left-24 w-48 h-48 bg-rose-500/10 blur-[80px] rounded-full" />
+        <div className="w-24 h-24 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-8 border border-rose-500/20 shadow-lg">
+          <span className="text-5xl">🌫️</span>
+        </div>
+        <h2 className="text-3xl font-black text-slate-100 tracking-tight mb-4">This poll has vanished</h2>
+        <p className="text-slate-400 font-medium mb-12 max-w-sm mx-auto leading-relaxed">
+          The debate has ended. This poll has either self-destructed or was removed by its creator.
+        </p>
+        <button
+          onClick={handleGoBack}
+          className="inline-flex items-center gap-3 px-10 py-4 rounded-2xl bg-white text-slate-950 font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-[0_0_40px_rgba(255,255,255,0.1)] active:scale-95 group"
+        >
+          <ArrowRight className="w-5 h-5 rotate-180 group-hover:-translate-x-1 transition-transform" /> Back to Feed
+        </button>
+      </div>
+    </div>
+  );
 
   const isStructured = poll.participationMode === 'structured';
   const showResults = isCreator || hasVoted || (!isStructured && (hasSubmittedIdea || hasBrowsed));
@@ -506,33 +587,42 @@ export default function PollView() {
     <div className={clsx("mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6", showResults ? "max-w-5xl" : "max-w-2xl")}>
 
       {/* ══════════════════ HEADER ══════════════════ */}
-      <div className="bg-white rounded-[20px] p-8 xl:p-10 text-center relative overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+      <div className="bg-slate-900/60 backdrop-blur-2xl rounded-[24px] p-8 xl:p-12 text-center relative overflow-hidden shadow-2xl border border-white/10">
         <div className={clsx("absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r", cfg.accentGradient)} />
 
         {isCreator && (
-          <div className="absolute top-5 left-6 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary-600 bg-primary-50 px-3 py-1.5 rounded-full border border-primary-100">
-            <ShieldCheck className="w-4 h-4" /> Creator Dashboard
+          <div className="absolute top-5 left-6 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary-400 bg-primary-950/40 px-3 py-1.5 rounded-full border border-primary-900/50">
+            <ShieldCheck className="w-3.5 h-3.5" /> Creator Dashboard
           </div>
         )}
 
         <div className="absolute top-5 right-6 flex items-center gap-2">
+          {isPro ? (
+            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border bg-slate-950 text-sky-400 border-sky-900/30 shadow-sm">
+              <ShieldCheck className="w-3.5 h-3.5" /> Verified Identity
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border bg-slate-950 text-primary-400 border-primary-900/30 shadow-sm">
+              <Lock className="w-3.5 h-3.5" /> 100% Anonymous
+            </div>
+          )}
           {isStructured ? (
-            <div className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border bg-slate-50 text-slate-600 border-slate-200">
+            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border bg-slate-950 text-slate-400 border-slate-800">
               🔒 Vote Required
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border bg-emerald-50 text-emerald-600 border-emerald-200">
+            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border bg-emerald-950/40 text-emerald-400 border-emerald-900/50">
               🔓 Open Poll
             </div>
           )}
-          <div className={clsx("flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border", cfg.badge)}>
+          <div className={clsx("flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border", cfg.badge.replace('bg-', 'bg-').replace('text-', 'text-'))}>
             {cfg.icon} {cfg.label}
           </div>
           <button
             onClick={handleBookmark}
             title={isBookmarked ? 'Remove bookmark' : 'Bookmark this poll'}
             className={clsx("p-2 rounded-full border transition-all duration-200 hover:scale-110 active:scale-95",
-              isBookmarked ? "bg-amber-50 border-amber-300 text-amber-500" : "bg-white border-slate-200 text-slate-400 hover:border-amber-300 hover:text-amber-500"
+              isBookmarked ? "bg-amber-950/40 border-amber-900 text-amber-500" : "bg-slate-950 border-slate-800 text-slate-500 hover:border-amber-900 hover:text-amber-500"
             )}
           >
             {isBookmarked ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
@@ -541,29 +631,29 @@ export default function PollView() {
 
         {/* ─── Unified Timer Bar ────────────────────────────── */}
         {(poll.selfDestruct || (poll.correctOptionId && !isRevealed)) && (
-          <div className="mt-8 mb-4 flex flex-wrap justify-center gap-4 animate-in fade-in zoom-in-95 duration-700">
+          <div className="mt-12 mb-6 flex flex-wrap justify-center gap-4 animate-in fade-in zoom-in-95 duration-700">
             {poll.selfDestruct && (
               <div className={clsx(
-                "flex items-center gap-2 px-4 py-2 rounded-2xl border-2 shadow-sm transition-all",
-                isExpired ? "bg-rose-50 border-rose-200 text-rose-600" : "bg-white border-rose-100 text-rose-500"
+                "flex items-center gap-2 px-4 py-2.5 rounded-2xl border-2 shadow-lg transition-all",
+                isExpired ? "bg-rose-950/40 border-rose-900 text-rose-500" : "bg-slate-950 border-rose-900/30 text-rose-400"
               )}>
-                <div className="bg-rose-500 p-1 rounded-lg text-white">
-                  <Timer className="w-3.5 h-3.5" />
+                <div className="bg-rose-600 p-1 rounded-lg text-white">
+                  <Timer className="w-4 h-4" />
                 </div>
                 <div className="text-left">
-                  <p className="text-[10px] font-black uppercase tracking-wider opacity-60 leading-none mb-0.5">Self-Destruct</p>
-                  <p className="text-xs font-black tabular-nums">{isExpired ? "Exploded" : formatTimeLeft(poll.expiresAt - now)}</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest opacity-60 leading-none mb-1">Self-Destruct</p>
+                  <p className="text-sm font-black tabular-nums">{isExpired ? "Exploded" : formatTimeLeft(poll.expiresAt - now)}</p>
                 </div>
               </div>
             )}
             {poll.correctOptionId && !isRevealed && (
-              <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border-2 border-emerald-100 bg-white text-emerald-600 shadow-sm transition-all">
-                <div className="bg-emerald-500 p-1 rounded-lg text-white">
-                  <Sparkles className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border-2 border-emerald-900/30 bg-slate-950 text-emerald-400 shadow-lg transition-all">
+                <div className="bg-emerald-600 p-1 rounded-lg text-white">
+                  <Sparkles className="w-4 h-4" />
                 </div>
                 <div className="text-left">
-                  <p className="text-[10px] font-black uppercase tracking-wider opacity-60 leading-none mb-0.5">Answer Reveal</p>
-                  <p className="text-xs font-black tabular-nums">
+                  <p className="text-[9px] font-black uppercase tracking-widest opacity-60 leading-none mb-1">Answer Reveal</p>
+                  <p className="text-sm font-black tabular-nums">
                     {poll.revealAt ? formatTimeLeft(poll.revealAt - now) : "Creator Reveal"}
                   </p>
                 </div>
@@ -572,19 +662,19 @@ export default function PollView() {
           </div>
         )}
 
-        <h1 className={clsx("font-extrabold text-slate-800 tracking-tight leading-tight pt-4", showResults ? "text-3xl md:text-4xl mb-4" : "text-3xl mb-8")}>
+        <h1 className={clsx("font-black text-slate-100 tracking-tighter leading-tight pt-4 drop-shadow-2xl", showResults ? "text-4xl md:text-5xl mb-6" : "text-4xl mb-10")}>
           {poll.title}
         </h1>
 
         {showResults && (
-          <div className="flex items-center justify-center gap-4 flex-wrap">
-            <div className="inline-flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
-              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-slate-600 font-semibold text-sm">{(poll.totalVotes || 0).toLocaleString()} votes</span>
+          <div className="flex items-center justify-center gap-5 flex-wrap">
+            <div className="inline-flex items-center gap-2 bg-slate-950/50 px-5 py-2.5 rounded-full border border-white/5 shadow-inner">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+              <span className="text-slate-400 font-black text-xs uppercase tracking-widest">{(poll.totalVotes || 0).toLocaleString()} votes</span>
             </div>
             {lastUpdated && (
-              <span className="text-[11px] text-slate-400 font-medium">
-                Updated {timeAgo(lastUpdated)}
+              <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">
+                Synced {timeAgo(lastUpdated)}
               </span>
             )}
           </div>
@@ -596,21 +686,21 @@ export default function PollView() {
 
         {/* ─── VOTING PANEL ─────────────────────────────────── */}
         {showVoting && (
-          <div className={clsx("bg-white rounded-[20px] p-6 md:p-8 flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex-1 order-2 lg:order-1 relative overflow-hidden")}>
+          <div className={clsx("bg-slate-900/60 backdrop-blur-2xl rounded-[24px] p-6 md:p-10 flex flex-col shadow-2xl border border-white/5 flex-1 order-2 lg:order-1 relative overflow-hidden")}>
             <div className={clsx("absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r", cfg.accentGradient)} />
             {isExpired ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center py-12 animate-in fade-in zoom-in-95 duration-500">
-                 <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mb-4 border border-rose-100 shadow-sm">
-                    <span className="text-2xl relative top-px">💥</span>
+                 <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mb-6 border border-rose-500/20 shadow-lg">
+                    <span className="text-3xl relative top-px">💥</span>
                  </div>
-                 <h2 className="text-xl font-extrabold text-slate-800 mb-2">This poll has self-destructed</h2>
-                 <p className="text-sm text-slate-500 max-w-[280px] leading-relaxed">
+                 <h2 className="text-2xl font-black text-white mb-3 tracking-tight">This poll has self-destructed</h2>
+                 <p className="text-sm text-slate-400 max-w-[280px] leading-relaxed font-medium">
                     The clock has run out. Voting is disabled, preserving this moment in time forever.
                  </p>
                  {!showResults && !isCreator && (
                     <button
                       onClick={handleBrowse}
-                      className="mt-8 px-6 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-bold hover:bg-slate-200 transition-all flex items-center gap-2"
+                      className="mt-10 px-8 py-3 rounded-2xl bg-white text-slate-950 text-sm font-black uppercase tracking-widest hover:bg-primary-500 hover:text-white transition-all flex items-center gap-2 shadow-xl"
                     >
                       View dead results <ArrowRight className="w-4 h-4" />
                     </button>
@@ -618,86 +708,122 @@ export default function PollView() {
               </div>
             ) : (
               <>
-                <h2 className="text-xl font-bold mb-1 text-slate-800 pt-2">
+                <h2 className="text-2xl font-black mb-1 text-white pt-2 tracking-tight">
                   {isCreator ? "Cast Your Vote (Optional)" : "Cast Your Vote"}
                 </h2>
-                <p className="text-sm text-slate-400 mb-6">
+                <p className="text-sm text-slate-500 mb-8 font-medium">
                   {poll.correctOptionId ? "This poll has a correct answer — give it your best shot!" : "Your answer helps shape the AI summary."}
                 </p>
 
                 {error && (
-                  <div className="mb-5 p-4 bg-rose-50 text-rose-700 rounded-xl border border-rose-200 font-medium text-sm">{error}</div>
+                  <div className="mb-6 p-5 bg-rose-950/40 text-rose-400 rounded-2xl border-2 border-rose-900/50 font-bold text-sm reveal-dramatic">{error}</div>
                 )}
 
                 <form onSubmit={handleVote} className="flex-1 flex flex-col">
-                  <div className="space-y-2.5 mb-8">
-                    {poll.options.map((option) => (
-                      <label key={option.id} className={clsx(
-                        "flex items-center gap-4 p-4 rounded-[16px] border cursor-pointer transition-all duration-200",
-                        selectedOption === option.id
-                          ? (isPro ? "border-sky-400 bg-sky-50/60 shadow-sm" : "border-primary-400 bg-primary-50/60 shadow-sm")
-                          : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                      )}>
-                        <input
-                          type="radio" name="poll_option" value={option.id}
-                          checked={selectedOption === option.id}
-                          onChange={() => setSelectedOption(option.id)}
-                          className={clsx("w-5 h-5", isPro ? "text-sky-600 focus:ring-sky-500" : "text-primary-600 focus:ring-primary-500")}
-                        />
-                        <span className={clsx("font-semibold", selectedOption === option.id ? (isPro ? "text-sky-900" : "text-primary-900") : "text-slate-700")}>
-                          {option.text}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-
-                  <div className="mt-auto space-y-5 pt-5 border-t border-slate-100">
-                    <div>
-                      <label htmlFor="reason" className="block text-sm font-semibold text-slate-700 mb-2">
-                        {isPro ? 'Your reasoning' : 'Why did you choose this?'}
-                        <span className="text-slate-400 font-normal ml-1">(Optional)</span>
-                      </label>
-                      <textarea
-                        id="reason" rows={2} maxLength={200}
-                        value={reason} onChange={(e) => setReason(e.target.value)}
-                        placeholder={isPro ? "Provide a brief rationale..." : "Briefly explain your choice..."}
-                        className={clsx("w-full px-5 py-4 rounded-[16px] border border-slate-200 focus:ring-0 outline-none transition text-sm bg-slate-50 resize-none placeholder-slate-400 shadow-sm", isPro ? "focus:border-sky-500" : "focus:border-primary-500")}
-                      />
-                      <div className="text-right text-xs text-slate-400 mt-1.5 font-medium">
-                        <span className={reason.length > 180 ? 'text-rose-500' : ''}>{reason.length}</span>/200
+                  {isPro && !isUserVerified() ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center py-10 animate-in fade-in zoom-in-95 duration-500">
+                      <div className="w-16 h-16 bg-sky-500/10 rounded-full flex items-center justify-center mb-6 border border-sky-500/20 shadow-lg">
+                        <Lock className="w-8 h-8 text-sky-400" />
                       </div>
-                    </div>
-
-                    <div className="flex flex-col gap-3">
+                      <h3 className="text-xl font-black text-white mb-2 tracking-tight">Verified Response Required</h3>
+                      <p className="text-xs text-slate-500 max-w-[240px] leading-relaxed mb-10 font-medium">
+                        Professional mode requires a verified identity to ensure accountability and data integrity.
+                      </p>
                       <button
-                        type="submit" disabled={!selectedOption || isVoting}
-                        className={clsx("w-full flex items-center justify-center gap-2 text-white font-bold text-base py-4 rounded-[16px] shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none",
-                          isPro ? "bg-gradient-to-r from-sky-600 to-slate-600 shadow-sky-500/30" : "bg-gradient-to-r from-primary-600 to-indigo-600 shadow-indigo-500/30"
-                        )}
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await signInWithGoogle();
+                            // Force re-sync of auth state if needed, though Firebase usually handles it
+                          } catch (err) {
+                            setError('Sign-in failed. Please try again.');
+                          }
+                        }}
+                        className="w-full flex items-center justify-center gap-3 bg-white text-slate-950 font-black text-sm py-4 rounded-2xl shadow-xl hover:bg-sky-500 hover:text-white transition-all transform hover:-translate-y-1 active:scale-95"
                       >
-                        {revealStage === 1 ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            Locking in...
-                          </div>
-                        ) : (
-                          <><Send className="w-4 h-4" /> {cfg.voteCta}</>
-                        )}
+                        <LogIn className="w-4 h-4" /> Sign in with Google
                       </button>
-                      
-                      {!isStructured && !isCreator && (
-                        <div className="text-center">
-                          <button
-                            type="button"
-                            onClick={handleBrowse}
-                            className="text-xs text-slate-400 hover:text-slate-600 font-medium transition-colors underline-offset-2 hover:underline"
-                          >
-                            Skip — just browse results →
-                          </button>
-                        </div>
-                      )}
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="space-y-3 mb-10">
+                        {poll.options.map((option) => (
+                          <label key={option.id} className={clsx(
+                            "flex items-center gap-4 p-5 rounded-[20px] border-2 cursor-pointer transition-all duration-300",
+                            selectedOption === option.id
+                              ? (isPro ? "border-sky-500 bg-sky-950/40 shadow-[0_0_20px_rgba(14,165,233,0.15)]" : "border-primary-500 bg-indigo-950/40 shadow-[0_0_20px_rgba(99,102,241,0.15)]")
+                              : "border-slate-800 bg-slate-950/20 hover:border-slate-700 hover:bg-slate-950/40"
+                          )}>
+                            <div className={clsx(
+                              "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                              selectedOption === option.id 
+                                ? (isPro ? "border-sky-500 bg-sky-500" : "border-primary-500 bg-primary-500") 
+                                : "border-slate-700"
+                            )}>
+                              {selectedOption === option.id && <div className="w-2 h-2 bg-white rounded-full" />}
+                            </div>
+                            <span className={clsx("font-black text-base tracking-tight", selectedOption === option.id ? "text-white" : "text-slate-400")}>
+                              {option.text}
+                            </span>
+                            <input
+                              type="radio" name="poll_option" value={option.id}
+                              checked={selectedOption === option.id}
+                              onChange={() => setSelectedOption(option.id)}
+                              className="hidden"
+                            />
+                          </label>
+                        ))}
+                      </div>
+
+                      <div className="mt-auto space-y-6 pt-6 border-t border-white/5">
+                        <div>
+                          <label htmlFor="reason" className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3 ml-1">
+                            {isPro ? 'Your reasoning' : 'Why did you choose this?'}
+                            <span className="text-slate-700 font-bold ml-1 normal-case tracking-normal">(Optional)</span>
+                          </label>
+                          <textarea
+                            id="reason" rows={2} maxLength={200}
+                            value={reason} onChange={(e) => setReason(e.target.value)}
+                            placeholder={isPro ? "Provide a brief rationale..." : "Briefly explain your choice..."}
+                            className={clsx("w-full px-6 py-5 rounded-[20px] border-2 border-slate-800 focus:ring-0 outline-none transition text-sm bg-slate-950/50 text-white resize-none placeholder-slate-700 shadow-inner", isPro ? "focus:border-sky-500" : "focus:border-primary-500")}
+                          />
+                          <div className="text-right text-[10px] text-slate-600 mt-2 font-black uppercase tracking-widest">
+                            <span className={reason.length > 180 ? 'text-rose-500' : ''}>{reason.length}</span>/200
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                          <button
+                            type="submit" disabled={!selectedOption || isVoting}
+                            className={clsx("w-full flex items-center justify-center gap-3 text-white font-black text-lg py-5 rounded-[24px] shadow-2xl hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none",
+                              isPro ? "bg-gradient-to-r from-sky-600 to-indigo-600 shadow-sky-500/20" : "bg-gradient-to-r from-primary-600 to-purple-600 shadow-indigo-500/20"
+                            )}
+                          >
+                            {revealStage === 1 ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                                Locking in...
+                              </div>
+                            ) : (
+                              <><Send className="w-5 h-5" /> {cfg.voteCta}</>
+                            )}
+                          </button>
+                          
+                          {!isStructured && !isCreator && (
+                            <div className="text-center">
+                              <button
+                                type="button"
+                                onClick={handleBrowse}
+                                className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-300 transition-colors"
+                              >
+                                Skip — just browse results →
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </form>
               </>
             )}
@@ -706,42 +832,60 @@ export default function PollView() {
 
         {/* ─── RESULTS COLUMN ───────────────────────────────── */}
         {showResults && (
-          <div className="space-y-5 order-1 lg:order-2">
+          <div className="space-y-6 order-1 lg:order-2">
 
             {/* ── Creator: Share Panel ── */}
             {isCreator && (
-              <div className="bg-white rounded-[20px] p-5 shadow-[0_4px_16px_rgb(0,0,0,0.04)] border border-slate-100 flex items-center justify-between gap-4">
+              <div className="bg-slate-900/60 backdrop-blur-2xl rounded-[24px] p-6 shadow-2xl border border-white/10 flex items-center justify-between gap-4">
                 <div>
-                  <h3 className="font-bold text-slate-800">Share Poll</h3>
-                  <p className="text-sm text-slate-400 mt-0.5">Copy the link to collect votes.</p>
+                  <h3 className="font-black text-white tracking-tight">Share Poll</h3>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Copy link to gather votes</p>
                 </div>
-                <button onClick={handleCopyLink} className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-xl transition-colors shrink-0">
-                  {copiedLink ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <Copy className="w-5 h-5" />}
-                  {copiedLink ? "Copied!" : "Copy Link"}
-                </button>
+                <div className="flex gap-2">
+                  {hasVoted && (
+                    <button onClick={handleCopyVerdict} className="flex items-center gap-2 bg-primary-600 hover:bg-primary-500 text-white font-black text-[10px] uppercase tracking-widest py-3 px-5 rounded-xl transition-all duration-300 shadow-lg">
+                      {copiedVerdict ? <CheckCircle2 className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                      {copiedVerdict ? "Verdict Copied!" : "Share Verdict"}
+                    </button>
+                  )}
+                  <button onClick={handleCopyLink} className="flex items-center gap-2 bg-white hover:bg-primary-500 text-slate-950 hover:text-white font-black text-[10px] uppercase tracking-widest py-3 px-5 rounded-xl transition-all duration-300 shrink-0 shadow-lg">
+                    {copiedLink ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    {copiedLink ? "Copied!" : "Copy Link"}
+                  </button>
+                </div>
               </div>
             )}
 
             {/* ════ ZONE 1: FEEDBACK ════════════════════════════ */}
             {(hasVoted || isCreator) && (
-              <div className={clsx("space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500")}>
+              <div className={clsx("space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500")}>
 
                 {/* Vote Confirmed (participants only) */}
                 {revealStage === 2 && !isCreator && (
-                  <div className="bg-white border-2 border-emerald-500 rounded-[24px] p-6 flex items-center gap-4 text-emerald-800 shadow-xl reveal-dramatic">
-                    <div className="bg-emerald-500 p-2 text-white rounded-full shrink-0 shadow-lg">
-                      <CheckCircle2 className="w-6 h-6" />
+                  <div className="bg-slate-950/60 border-2 border-emerald-500/50 backdrop-blur-2xl rounded-[28px] p-7 flex items-center gap-5 text-emerald-400 shadow-2xl reveal-dramatic">
+                    <div className="bg-emerald-500 p-2.5 text-slate-950 rounded-full shrink-0 shadow-[0_0_20px_rgba(16,185,129,0.4)]">
+                      <CheckCircle2 className="w-7 h-7" />
                     </div>
                     <div>
-                      <p className="font-black text-xl uppercase tracking-tighter">Vote Locked!</p>
-                      <p className="text-sm text-emerald-600 font-bold italic">Gathering crowd data...</p>
+                      <p className="font-black text-2xl uppercase tracking-tighter leading-none mb-1">Vote Locked!</p>
+                      <p className="text-[10px] text-emerald-500/70 font-black uppercase tracking-widest italic">Syncing crowd data...</p>
                     </div>
                   </div>
                 )}
 
                 {/* You vs Crowd (participants only) */}
                 {hasVoted && !isCreator && (
-                  <YouVsCrowd poll={poll} selectedOption={selectedOption} cfg={cfg} revealStage={revealStage} />
+                  <div className="relative group">
+                    <YouVsCrowd poll={poll} selectedOption={selectedOption} cfg={cfg} revealStage={revealStage} />
+                    {revealStage >= 3 && (
+                      <button 
+                        onClick={handleCopyVerdict}
+                        className="absolute -top-3 -right-3 bg-white text-slate-950 font-black text-[10px] uppercase tracking-widest px-4 py-2 rounded-xl shadow-2xl hover:bg-emerald-500 hover:text-white transition-all transform hover:scale-110 active:scale-95 z-10"
+                      >
+                        {copiedVerdict ? "Copied! ✨" : "Share Verdict 🔗"}
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {/* Correctness (participants + creator) - only show after verdict */}
@@ -761,30 +905,31 @@ export default function PollView() {
             {/* ════ ZONE 2: CHART ══════════════════════════════ */}
             {revealStage === 4 && (
               poll.totalVotes === 0 ? (
-                <div className="bg-white rounded-[20px] p-12 text-center shadow-[0_4px_16px_rgb(0,0,0,0.04)] border border-slate-100 animate-in fade-in duration-500">
-                  <p className="text-slate-500 font-semibold text-lg mb-1">No Votes Yet</p>
-                  <p className="text-slate-400 text-sm">Be the first to vote!</p>
+                <div className="bg-slate-900/40 backdrop-blur-xl rounded-[24px] p-16 text-center shadow-2xl border border-white/5 animate-in fade-in duration-500">
+                  <p className="text-slate-300 font-black text-xl tracking-tight mb-2">No Votes Yet</p>
+                  <p className="text-slate-500 text-sm font-medium">Be the first to leave your mark!</p>
                 </div>
               ) : (
-                <div className="bg-white rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                  <p className="section-eyebrow mb-6">Live Distribution</p>
-                  <div className="h-[280px] -ml-4">
+                <div className="bg-slate-900/60 backdrop-blur-2xl rounded-[28px] p-8 md:p-10 shadow-2xl border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-8">Live Distribution</p>
+                  <div className="h-[300px] -ml-6">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 80, left: 0, bottom: 0 }}>
                         <XAxis type="number" hide />
-                        <YAxis dataKey="text" type="category" width={110} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                        <YAxis dataKey="text" type="category" width={120} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 800 }} axisLine={false} tickLine={false} />
                         <Tooltip
-                          cursor={{ fill: '#f8fafc' }}
-                          contentStyle={{ borderRadius: '14px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', fontWeight: 'bold', fontSize: 13 }}
+                          cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                          contentStyle={{ backgroundColor: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', fontWeight: 'bold', fontSize: 13 }}
+                          itemStyle={{ color: '#f8fafc' }}
                           formatter={(v) => [`${v} votes`, '']}
                         />
-                        <Bar dataKey="voteCount" radius={[0, 10, 10, 0]} barSize={34}>
+                        <Bar dataKey="voteCount" radius={[0, 12, 12, 0]} barSize={38}>
                           {chartData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.fill} />
                           ))}
                           <LabelList
                             content={(props) => (
-                              <YouLabel {...props} selectedOption={selectedOption} />
+                              <BarLabel {...props} selectedOption={selectedOption} totalVotes={poll.totalVotes} />
                             )}
                           />
                         </Bar>
@@ -795,120 +940,7 @@ export default function PollView() {
               )
             )}
 
-            {/* ════ ZONE 3: AI + EXPLORATION ═══════════════════ */}
-            {revealStage === 4 && poll.totalVotes > 0 && (
-              <div className={clsx("bg-gradient-to-br rounded-[24px] p-[1.5px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-bottom-6 duration-1000", cfg.aiGradient)}>
-                <div className="bg-white rounded-[22px] p-8 md:p-10">
-
-                  {/* AI Section Header context */}
-                  <p className="section-eyebrow mb-5">{cfg.aiTitle}</p>
-
-                  {/* AI summary or CTA */}
-                  {!poll.aiSummary ? (
-                    <div className="text-center py-8 rounded-xl border border-dashed border-slate-200 mb-6 bg-slate-50/50">
-                      <Sparkles className="w-6 h-6 text-indigo-300 mx-auto mb-3" />
-                      {poll.totalVotes < MIN_VOTES_FOR_AI ? (
-                        <>
-                          <p className="text-sm text-slate-500 mb-2 px-4 font-medium">
-                            {isPro ? 'Analysis unlocks with enough responses.' : 'Insight unlocks once the crowd grows.'}
-                          </p>
-                          <p className="text-xs font-bold text-slate-400">
-                            {poll.totalVotes}/{MIN_VOTES_FOR_AI} votes needed
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-sm text-slate-500 mb-4 px-4 font-medium">
-                            {isPro ? 'Ready to analyze participant reasoning.' : 'Ready to summarize recent hot takes.'}
-                          </p>
-                          <button
-                            onClick={handleGenerateAISummary}
-                            disabled={isGeneratingAI || !poll.recentReasons?.length}
-                            className={clsx('text-white text-sm font-bold py-2 px-6 rounded-xl shadow-md transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto',
-                              isPro ? 'bg-sky-600 hover:bg-sky-700 shadow-sky-500/30' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/30'
-                            )}
-                          >
-                            {isGeneratingAI ? <><div className={clsx('w-4 h-4 border-2 border-t-white rounded-full animate-spin', isPro ? 'border-sky-400' : 'border-indigo-400')} /> Analyzing...</> : 'Generate Insight'}
-                          </button>
-                        </>
-                      )}
-                      {!poll.recentReasons?.length && poll.totalVotes >= MIN_VOTES_FOR_AI && <p className="text-xs text-rose-500 font-medium mt-3">Needs at least one reason to generate.</p>}
-                      {aiError && <p className="text-xs text-rose-500 font-medium mt-3 px-4">{aiError}</p>}
-                    </div>
-                  ) : (
-                    <div className="mb-6 p-1">
-                      <p className="text-[15px] leading-relaxed font-medium italic border-l-[3px] border-indigo-400 pl-4 text-slate-700">
-                        "{poll.aiSummary}"
-                      </p>
-                      {/* Creator can refresh analysis when vote count grows meaningfully */}
-                      {isCreator && poll.totalVotes >= (poll.aiGeneratedAtVotes || 0) + 5 && (
-                        <div className="mt-4 flex items-center gap-3">
-                          <button
-                            onClick={handleGenerateAISummary}
-                            disabled={isGeneratingAI}
-                            className={clsx('text-xs font-bold py-1.5 px-4 rounded-xl border transition-all disabled:opacity-50', isPro ? 'border-sky-200 text-sky-600 hover:bg-sky-50' : 'border-indigo-200 text-indigo-600 hover:bg-indigo-50')}
-                          >
-                            {isGeneratingAI ? 'Updating...' : `↺ Refresh Insight (${poll.totalVotes} votes now)`}
-                          </button>
-                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Creator only</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Reasons Feed */}
-                  {poll.recentReasons?.length > 0 ? (
-                    <div>
-                      <p className="section-eyebrow mb-3 mt-4">
-                        {(hasVoted && !isCreator) ? feedHeader() : cfg.feedTitle}
-                      </p>
-                      <div className="space-y-0">
-                        {poll.recentReasons.map((r, idx) => (
-                          <div key={idx} className="flex gap-3 items-start py-4 border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50 transition-all px-2">
-                            <MessageSquareQuote className="w-4 h-4 text-slate-300 mt-1 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-slate-700 font-medium mb-2.5 leading-snug">"{r.text}"</p>
-                              <div className="flex items-center justify-between gap-2 flex-wrap">
-                                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold uppercase tracking-wide bg-white border border-slate-200 text-slate-500">
-                                  {poll.options.find(o => o.id === r.optionId)?.text}
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  {cfg.reactions.map(rx => {
-                                    const stateKey = `${idx}_${rx.key}`;
-                                    const hasReacted = !!myReactions[stateKey];
-                                    return (
-                                      <button
-                                        key={rx.key} type="button"
-                                        onClick={() => handleReaction(idx, rx.key)}
-                                        title={rx.label}
-                                        className={clsx("flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs border transition-all duration-150",
-                                          hasReacted
-                                            ? "bg-indigo-50 border-indigo-200"
-                                            : "bg-white border-slate-100 hover:bg-slate-100 hover:border-slate-200 hover:scale-110 active:scale-95"
-                                        )}
-                                      >
-                                        <span className="text-base leading-none">{rx.emoji}</span>
-                                        <span className={clsx("font-bold text-[11px]", hasReacted ? "text-indigo-500" : "text-slate-400")}>
-                                          {r.reactions?.[rx.key] || 0}
-                                        </span>
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-center py-3 text-sm text-slate-400 italic">{cfg.reasonsEmpty}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ════ IDEA CLOUD ════════════════════════════════ */}
+            {/* ════ ZONE 3: IDEA CLOUD ════════════════════════ */}
             {revealStage === 4 && (showIdeaCloud ? (
               <IdeaCloud
                 poll={poll}
@@ -937,6 +969,158 @@ export default function PollView() {
                 </div>
               </div>
             ))}
+
+            {/* ════ ZONE 4: AI + EXPLORATION ═══════════════════ */}
+            {revealStage === 4 && poll.totalVotes > 0 && (
+              <div className={clsx("bg-gradient-to-br rounded-[30px] p-[1.5px] shadow-2xl animate-in fade-in slide-in-from-bottom-6 duration-1000", cfg.aiGradient)}>
+                <div className="bg-slate-900/90 backdrop-blur-3xl rounded-[29px] p-8 md:p-12">
+
+                  {/* AI Section Header context */}
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-6">{cfg.aiTitle}</p>
+
+                  {/* AI summary or CTA */}
+                  {!poll.aiSummary ? (
+                    <div className="text-center py-10 rounded-2xl border-2 border-dashed border-white/5 mb-8 bg-slate-950/30">
+                      <Sparkles className="w-8 h-8 text-primary-400 mx-auto mb-4" />
+                      {(poll.totalVotes < MIN_VOTES_FOR_AI && !isCreator) ? (
+                        <>
+                          <p className="text-sm text-slate-300 mb-2 px-6 font-bold">
+                            {isPro ? 'Analysis unlocks with more data.' : 'Insight unlocks once the crowd grows.'}
+                          </p>
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                            {poll.totalVotes}/{MIN_VOTES_FOR_AI} votes needed
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-slate-300 mb-6 px-6 font-bold">
+                            {isCreator ? 'Creator Access: Generate insight now.' : (isPro ? 'Ready to analyze participant reasoning.' : 'Ready to summarize recent hot takes.')}
+                          </p>
+                          <button
+                            onClick={handleGenerateAISummary}
+                            disabled={isGeneratingAI || !poll.recentReasons?.length}
+                            className={clsx('text-white text-xs font-black uppercase tracking-widest py-3 px-8 rounded-xl shadow-xl transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto',
+                              isPro ? 'bg-sky-600 hover:bg-sky-500' : 'bg-indigo-600 hover:bg-indigo-500'
+                            )}
+                          >
+                            {isGeneratingAI ? <><div className="w-4 h-4 border-2 border-t-white border-white/30 rounded-full animate-spin" /> Analyzing...</> : 'Generate Insight'}
+                          </button>
+                        </>
+                      )}
+                      {!poll.recentReasons?.length && (poll.totalVotes >= MIN_VOTES_FOR_AI || isCreator) && <p className="text-[10px] text-rose-500 font-black uppercase tracking-widest mt-4">At least one reason required.</p>}
+                      {aiError && <p className="text-[10px] text-rose-500 font-black uppercase tracking-widest mt-4 px-6">{aiError}</p>}
+                    </div>
+                  ) : (
+                    <div className="mb-10 p-1 relative group/ai">
+                      <p className="text-lg md:text-xl leading-relaxed font-bold italic border-l-4 border-primary-500 pl-6 text-white drop-shadow-lg pr-12">
+                        "{poll.aiSummary}"
+                      </p>
+                      
+                      <button 
+                        onClick={handleCopyInsight}
+                        className="absolute top-0 right-0 p-2 text-slate-500 hover:text-white transition-colors opacity-0 group-hover/ai:opacity-100"
+                        title="Copy AI Insight"
+                      >
+                        {copiedVerdict ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <Copy className="w-5 h-5" />}
+                      </button>
+
+                      {/* Creator can refresh analysis whenever they want */}
+                      {isCreator && (
+                        <div className="mt-6 flex items-center gap-4">
+                          <button
+                            onClick={handleGenerateAISummary}
+                            disabled={isGeneratingAI || !poll.recentReasons?.length}
+                            className={clsx('text-[10px] font-black uppercase tracking-widest py-2 px-5 rounded-lg border-2 transition-all disabled:opacity-50 group', 
+                              isPro ? 'border-sky-900 text-sky-400 hover:bg-sky-950' : 'border-indigo-900 text-indigo-400 hover:bg-indigo-950'
+                            )}
+                          >
+                            {isGeneratingAI ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 border-2 border-t-white border-white/20 rounded-full animate-spin" />
+                                Updating...
+                              </div>
+                            ) : (
+                              <span className="group-hover:scale-105 transition-transform flex items-center gap-2">
+                                ↺ Regenerate Insight ({poll.totalVotes} votes)
+                              </span>
+                            )}
+                          </button>
+                          <div className="flex flex-col">
+                            <span className="text-[9px] text-slate-600 font-black uppercase tracking-widest">Creator Access</span>
+                            <span className="text-[8px] text-slate-700 font-bold uppercase tracking-[0.1em]">Forces re-analysis of all votes</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Reasons Feed */}
+                  {poll.recentReasons?.length > 0 ? (
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-6 mt-8">
+                        {(hasVoted && !isCreator) ? feedHeader() : cfg.feedTitle}
+                      </p>
+                      <div className="space-y-1">
+                        {poll.recentReasons.map((r, idx) => (
+                          <div key={idx} className="flex gap-4 items-start py-6 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition-all px-4 rounded-2xl group/reason">
+                            <div className="flex flex-col items-center gap-2 mt-1 shrink-0">
+                              {isPro && r.author?.photoURL ? (
+                                <img src={r.author.photoURL} alt="" className="w-8 h-8 rounded-full border border-sky-500/30" />
+                              ) : (
+                                <MessageSquareQuote className="w-5 h-5 text-slate-600" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                {isPro && r.author && (
+                                  <div className="flex flex-col mb-2">
+                                    <span className="text-[11px] font-black text-sky-400 uppercase tracking-wider leading-none">{r.author.name}</span>
+                                    <span className="text-[9px] font-bold text-slate-500 lowercase leading-none mt-1">{r.author.email}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-base text-slate-200 font-bold mb-4 leading-snug">"{r.text}"</p>
+                              <div className="flex items-center justify-between gap-3 flex-wrap">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-950 text-slate-400 border border-white/5">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: poll.options.find(o => o.id === r.optionId)?.color || '#6366f1' }} />
+                                  {poll.options.find(o => o.id === r.optionId)?.text}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {cfg.reactions.map(rx => {
+                                    const stateKey = `${r.timestamp}_${rx.key}`;
+                                    const hasReacted = !!myReactions[stateKey];
+                                    return (
+                                      <button
+                                        key={rx.key} type="button"
+                                        onClick={(e) => handleReaction(r.timestamp, rx.key, e)}
+                                        title={rx.label}
+                                        className={clsx("flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs border-2 transition-all duration-300",
+                                          hasReacted
+                                            ? "bg-primary-950/40 border-primary-500/50 text-primary-400"
+                                            : "bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700 hover:text-slate-300 hover:scale-110 active:scale-95 shadow-sm"
+                                        )}
+                                      >
+                                        <span className="text-base leading-none">{rx.emoji}</span>
+                                        <span className={clsx("font-black text-[11px]", hasReacted ? "text-primary-400" : "text-slate-500")}>
+                                          {r.reactions?.[rx.key] || 0}
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-center py-6 text-sm text-slate-600 font-bold uppercase tracking-widest italic">{cfg.reasonsEmpty}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
 
           </div>
         )}

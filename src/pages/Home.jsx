@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { TrendingUp, Clock, Bookmark, X, BookmarkCheck, ArrowRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { subscribeToTrendingPolls, deletePoll } from '../services/pollService';
+import { subscribeToTrendingPolls } from '../services/pollService';
 import { getRecentPolls, getSavedPolls, removeSavedPoll, clearRecentPolls } from '../utils/pollHistory';
 
 // ─── Small helper: relative time label ───────────────────────────────────────
@@ -28,14 +28,14 @@ function ModePill({ mode }) {
 // ─── Minimal local-history card ───────────────────────────────────────────────
 function HistoryCard({ poll, onRemove, showTime, timeKey }) {
   return (
-    <div className="group relative flex items-center gap-3 bg-white hover:bg-slate-50 rounded-[20px] px-4 py-3 border border-slate-100 hover:border-primary-200 hover:shadow-sm transition-all duration-200 animate-in fade-in slide-in-from-left-2 duration-300">
+    <div className="group relative flex items-center gap-3 bg-slate-900/40 hover:bg-slate-900/60 rounded-[20px] px-4 py-3 border border-white/5 hover:border-primary-500/30 hover:shadow-lg transition-all duration-200 animate-in fade-in slide-in-from-left-2 duration-300">
       <Link to={`/poll/${poll.id}`} className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-primary-600 transition-colors">
+        <p className="text-sm font-bold text-slate-200 truncate group-hover:text-primary-400 transition-colors">
           {poll.title}
         </p>
         <div className="flex items-center gap-2 mt-1">
           <ModePill mode={poll.mode} />
-          <span className="text-[11px] text-slate-400">
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
             {poll.totalVotes || 0} votes · {timeAgo(poll[timeKey])}
           </span>
         </div>
@@ -43,7 +43,7 @@ function HistoryCard({ poll, onRemove, showTime, timeKey }) {
       <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
         <Link
           to={`/poll/${poll.id}`}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+          className="p-1.5 rounded-lg text-slate-500 hover:text-primary-400 hover:bg-primary-500/10 transition-colors"
           title="Open poll"
         >
           <ArrowRight className="w-4 h-4" />
@@ -51,7 +51,7 @@ function HistoryCard({ poll, onRemove, showTime, timeKey }) {
         {onRemove && (
           <button
             onClick={(e) => { e.preventDefault(); onRemove(poll.id); }}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
             title="Remove"
           >
             <X className="w-4 h-4" />
@@ -70,20 +70,12 @@ export default function Home() {
   const [savedPolls, setSaved]      = useState([]);
 
   useEffect(() => {
-    const unsubscribe = subscribeToTrendingPolls(15, (data) => {
-      // Filter out polls that have self-destructed (using local time for efficiency)
+    const unsubscribe = subscribeToTrendingPolls(10, (data) => {
       const now = Date.now();
-
-      // Proactive cleanup: Delete expired polls from Firebase to save on limits
-      data.forEach(p => {
-        if (p.selfDestruct && p.expiresAt && p.expiresAt < now) {
-          deletePoll(p.id).catch(console.error);
-        }
-      });
-
+      // Filter expired polls visually; actual deletion happens when someone visits PollView
       const filtered = data
         .filter(p => !p.selfDestruct || !p.expiresAt || p.expiresAt > now)
-        .slice(0, 6); // Keep the top 6 trending
+        .slice(0, 6);
       setPolls(filtered);
       setLoading(false);
     });
@@ -120,23 +112,92 @@ export default function Home() {
     <div className="space-y-14 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
       {/* ─── Hero ─────────────────────────────────────────────────── */}
-      <div className="text-center space-y-6 py-20">
-        <h1 className="text-6xl md:text-7xl font-black tracking-tighter text-slate-900 leading-[0.9]">
+      <div className="text-center space-y-6 py-20 relative">
+        <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-slate-100 leading-[0.85]">
           What's the <br className="hidden md:block"/>
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 via-indigo-600 to-primary-500 animate-gradient-x">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-primary-400 to-indigo-400 animate-gradient-x drop-shadow-[0_0_30px_rgba(52,211,153,0.3)]">
             Verdict?
           </span>
         </h1>
-        <p className="text-xl text-slate-500 max-w-xl mx-auto pt-4 font-medium leading-relaxed">
-          The social judgment system where your opinion meets the crowd. 
-          Discover if you're a visionary or just part of the consensus.
+        <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto pt-6 font-medium leading-relaxed px-4">
+          The ultimate social judgment system. Test your knowledge in <span className="text-emerald-400 font-bold">Quizzes</span>, 
+          drop <span className="font-black uppercase tracking-tighter text-indigo-400">Hot Takes</span>, and see if your intuition 
+          matches the crowd — with modes for every level of privacy.
         </p>
-        <div className="pt-6">
+
+        {/* ─── Modes Visual Diagram ─── */}
+        <div className="pt-16 max-w-4xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Social Header */}
+            <div className="hidden md:flex flex-col items-center justify-center p-4">
+              <div className="text-2xl mb-1">🔥</div>
+              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-orange-500">Social Mode</h3>
+              <p className="text-[10px] text-slate-500 font-bold">100% Anonymous</p>
+            </div>
+            {/* Pro Header */}
+            <div className="hidden md:flex flex-col items-center justify-center p-4">
+              <div className="text-2xl mb-1">📊</div>
+              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-sky-500">Professional Mode</h3>
+              <p className="text-[10px] text-slate-500 font-bold">Verified Identity</p>
+            </div>
+
+            {/* Matrix Cells */}
+            <div className="group relative overflow-hidden bg-slate-900/40 border border-white/5 p-6 rounded-[24px] hover:border-orange-500/30 transition-all">
+              <div className="md:hidden flex items-center gap-2 mb-4">
+                <span className="text-orange-500 font-black text-[10px] uppercase">Social</span>
+                <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
+                <span className="text-slate-500 font-black text-[10px] uppercase">Open</span>
+              </div>
+              <div className="text-left">
+                <h4 className="text-white font-black tracking-tight mb-1">Open Participation</h4>
+                <p className="text-xs text-slate-500 font-medium">Browse results instantly. Perfect for viral debates and quick opinions.</p>
+              </div>
+            </div>
+
+            <div className="group relative overflow-hidden bg-slate-900/40 border border-white/5 p-6 rounded-[24px] hover:border-sky-500/30 transition-all">
+              <div className="md:hidden flex items-center gap-2 mb-4">
+                <span className="text-sky-500 font-black text-[10px] uppercase">Professional</span>
+                <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
+                <span className="text-slate-500 font-black text-[10px] uppercase">Open</span>
+              </div>
+              <div className="text-left">
+                <h4 className="text-white font-black tracking-tight mb-1">Open Feedback</h4>
+                <p className="text-xs text-slate-500 font-medium">Transparent insights. Great for team surveys and documented consensus.</p>
+              </div>
+            </div>
+
+            <div className="group relative overflow-hidden bg-slate-900/40 border border-white/5 p-6 rounded-[24px] hover:border-orange-500/30 transition-all">
+              <div className="md:hidden flex items-center gap-2 mb-4">
+                <span className="text-orange-500 font-black text-[10px] uppercase">Social</span>
+                <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
+                <span className="text-slate-500 font-black text-[10px] uppercase">Structured</span>
+              </div>
+              <div className="text-left">
+                <h4 className="text-white font-black tracking-tight mb-1">Forced Reveal</h4>
+                <p className="text-xs text-slate-500 font-medium">Vote first to see results. Eliminates bias for unfiltered hot takes.</p>
+              </div>
+            </div>
+
+            <div className="group relative overflow-hidden bg-slate-900/40 border border-white/5 p-6 rounded-[24px] hover:border-sky-500/30 transition-all">
+              <div className="md:hidden flex items-center gap-2 mb-4">
+                <span className="text-sky-500 font-black text-[10px] uppercase">Professional</span>
+                <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
+                <span className="text-slate-500 font-black text-[10px] uppercase">Structured</span>
+              </div>
+              <div className="text-left">
+                <h4 className="text-white font-black tracking-tight mb-1">Double Blind</h4>
+                <p className="text-xs text-slate-500 font-medium">The gold standard for work. Ensure independent, verified perspectives.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-12">
           <Link 
             to="/create" 
-            className="inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-2xl hover:bg-primary-600 hover:-translate-y-1 transition-all duration-300"
+            className="inline-flex items-center gap-3 bg-slate-100 text-slate-950 px-10 py-5 rounded-2xl font-black text-xl shadow-[0_0_50px_rgba(255,255,255,0.1)] hover:bg-emerald-500 hover:text-white hover:-translate-y-2 hover:scale-105 transition-all duration-300 group"
           >
-            Start a Debate <ArrowRight className="w-5 h-5" />
+            Ignite a Debate <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
       </div>
@@ -147,22 +208,22 @@ export default function Home() {
 
           {/* Recent Polls */}
           {recentPolls.length > 0 && (
-            <section className="bg-white rounded-[20px] p-6 border border-slate-100 shadow-[0_4px_20px_rgb(0,0,0,0.03)] animate-in fade-in duration-500">
-              <div className="flex items-center justify-between mb-4">
+            <section className="bg-slate-900/40 backdrop-blur-xl rounded-[24px] p-6 border border-white/5 shadow-2xl animate-in fade-in duration-500">
+              <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
-                  <div className="bg-violet-100 p-1.5 rounded-lg">
-                    <Clock className="w-4 h-4 text-violet-500" />
+                  <div className="bg-violet-500/20 p-2 rounded-xl border border-violet-500/20">
+                    <Clock className="w-4 h-4 text-violet-400" />
                   </div>
-                  <h2 className="text-base font-bold text-slate-800">Recently Viewed</h2>
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-300">Recently Viewed</h2>
                 </div>
                 <button
                   onClick={handleClearRecent}
-                  className="text-xs text-slate-400 hover:text-rose-500 font-medium transition-colors"
+                  className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-rose-400 transition-colors"
                 >
                   Clear all
                 </button>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {recentPolls.slice(0, 5).map(poll => (
                   <HistoryCard
                     key={poll.id}
@@ -176,17 +237,17 @@ export default function Home() {
 
           {/* Saved Polls */}
           {savedPolls.length > 0 && (
-            <section className="bg-white rounded-[20px] p-6 border border-slate-100 shadow-[0_4px_20px_rgb(0,0,0,0.03)] animate-in fade-in duration-500">
-              <div className="flex items-center justify-between mb-4">
+            <section className="bg-slate-900/40 backdrop-blur-xl rounded-[24px] p-6 border border-white/5 shadow-2xl animate-in fade-in duration-500">
+              <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
-                  <div className="bg-amber-100 p-1.5 rounded-lg">
-                    <BookmarkCheck className="w-4 h-4 text-amber-500" />
+                  <div className="bg-amber-500/20 p-2 rounded-xl border border-amber-500/20">
+                    <BookmarkCheck className="w-4 h-4 text-amber-400" />
                   </div>
-                  <h2 className="text-base font-bold text-slate-800">Saved Polls</h2>
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-300">Saved Polls</h2>
                 </div>
-                <span className="text-xs text-slate-400 font-medium">{savedPolls.length} saved</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{savedPolls.length} saved</span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {savedPolls.slice(0, 5).map(poll => (
                   <HistoryCard
                     key={poll.id}
@@ -203,24 +264,24 @@ export default function Home() {
 
       {/* ─── Trending Polls ───────────────────────────────────────── */}
       <div>
-        <div className="flex items-center gap-2 mb-8">
-          <div className="bg-rose-100 p-1.5 rounded-lg">
-            <TrendingUp className="w-5 h-5 text-rose-500" />
+        <div className="flex items-center gap-3 mb-10">
+          <div className="bg-rose-500/20 p-2 rounded-xl border border-rose-500/20">
+            <TrendingUp className="w-6 h-6 text-rose-400" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-800">Trending Now</h2>
+          <h2 className="text-3xl font-black text-white tracking-tighter">Trending Now</h2>
         </div>
         
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[1, 2, 3].map(i => (
-               <div key={i} className="glass-panel rounded-[20px] p-6 h-40 border border-white/40 bg-white/60 animate-pulse" />
+               <div key={i} className="bg-slate-900/40 backdrop-blur-xl rounded-[24px] p-8 h-48 border border-white/5 animate-pulse" />
             ))}
           </div>
         ) : polls.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-[20px] border border-slate-100 shadow-sm">
-            <div className="text-4xl mb-3">🗳️</div>
-            <p className="text-slate-600 font-semibold">No polls yet.</p>
-            <p className="text-slate-400 text-sm mt-1">Be the first to create one!</p>
+          <div className="text-center py-20 bg-slate-900/40 backdrop-blur-xl rounded-[24px] border border-white/5 shadow-2xl">
+            <div className="text-5xl mb-4">🗳️</div>
+            <p className="text-slate-300 font-black text-xl tracking-tight">No polls yet.</p>
+            <p className="text-slate-500 text-sm mt-2 font-medium">Be the first to ignite a debate!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -231,30 +292,36 @@ export default function Home() {
                 className="block group"
                 style={{ animationDelay: `${i * 60}ms` }}
               >
-                <div className="relative overflow-hidden bg-white rounded-[24px] p-7 h-full flex flex-col justify-between transition-all duration-500 transform group-hover:-translate-y-3 group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 group-hover:border-primary-200 animate-in fade-in duration-700">
+                <div className="relative overflow-hidden bg-slate-900/60 backdrop-blur-xl rounded-[28px] p-8 h-full flex flex-col justify-between transition-all duration-500 transform group-hover:-translate-y-3 group-hover:shadow-[0_30px_70px_rgba(0,0,0,0.4)] border border-white/5 group-hover:border-primary-500/40 animate-in fade-in duration-700">
                   {/* Subtle Heat Glow for high scores */}
                   {(poll.trendingScore || 0) > 2 && (
                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-rose-400/10 blur-[40px] rounded-full group-hover:bg-rose-400/20 transition-colors duration-500" />
                   )}
                   
-                  <div className="flex-1 pb-6">
-                    <div className="mb-4">
+                  <div className="flex-1 pb-8">
+                    <div className="mb-5">
                       <ModePill mode={poll.mode} />
                     </div>
-                    <h3 className="text-xl font-black text-slate-800 line-clamp-3 group-hover:text-primary-600 transition-colors leading-tight tracking-tight">
+                    <h3 className="text-2xl font-black text-white line-clamp-3 group-hover:text-primary-400 transition-colors leading-tight tracking-tighter">
                       {poll.title}
                     </h3>
                   </div>
 
-                  <div className="flex items-center justify-between text-sm border-t border-slate-50 pt-5 mt-auto">
-                    <div className="flex items-center gap-1.5 font-bold text-slate-400">
-                       <span className="text-slate-800">{(poll.totalVotes || 0).toLocaleString()}</span>
-                       <span className="text-[10px] uppercase tracking-wider font-black opacity-50">voters</span>
+                  <div className="flex items-center justify-between text-sm border-t border-white/5 pt-6 mt-auto">
+                    <div className="flex items-center gap-2 font-black text-slate-500">
+                       <span className="text-slate-200">{(poll.totalVotes || 0).toLocaleString()}</span>
+                       <span className="text-[10px] uppercase tracking-[0.15em] opacity-50">voters</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-rose-500 font-black bg-rose-50 px-3.5 py-1.5 rounded-xl border border-rose-100/50 shadow-sm transition-all group-hover:scale-110">
-                      <TrendingUp className="w-3.5 h-3.5" />
-                      <span className="text-xs uppercase tracking-tighter">On Fire</span>
-                    </div>
+                    {(poll.trendingScore || 0) > 1 ? (
+                      <div className="flex items-center gap-2 text-rose-400 font-black bg-rose-500/10 px-4 py-2 rounded-xl border border-rose-500/20 shadow-sm transition-all group-hover:scale-110">
+                        <TrendingUp className="w-4 h-4" />
+                        <span className="text-[10px] uppercase tracking-widest">On Fire</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-slate-500 font-black bg-slate-900/60 px-4 py-2 rounded-xl border border-white/5">
+                        <span className="text-[10px] uppercase tracking-widest">Trending</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Link>

@@ -4,11 +4,11 @@
 
 @layer base {
   body {
-    @apply text-slate-900 antialiased min-h-screen relative overflow-x-hidden;
-    background: #f8fafc;
+    @apply text-slate-200 antialiased min-h-screen relative overflow-x-hidden;
+    background-color: #020617; /* Very deep slate/blue for a premium dark base */
   }
 
-  /* High-energy, viral animated background */
+  /* High-energy, viral animated background - Dark Mode Edition */
   body::before {
     content: "";
     position: fixed;
@@ -18,12 +18,29 @@
     height: 100%;
     z-index: -1;
     background: 
-      radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(244, 63, 94, 0.1) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(245, 158, 11, 0.1) 0px, transparent 50%),
-      radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
-    filter: blur(80px);
-    animation: background-drift 20s ease-in-out infinite alternate;
+      radial-gradient(ellipse at 0% 0%, rgba(79, 70, 229, 0.25) 0px, transparent 60%),
+      radial-gradient(ellipse at 100% 0%, rgba(225, 29, 72, 0.2) 0px, transparent 60%),
+      radial-gradient(ellipse at 100% 100%, rgba(217, 119, 6, 0.2) 0px, transparent 60%),
+      radial-gradient(ellipse at 0% 100%, rgba(16, 185, 129, 0.2) 0px, transparent 60%);
+    filter: blur(90px);
+    animation: background-drift 25s ease-in-out infinite alternate;
+  }
+
+  /* Add a subtle technical grid overlay to make it feel like a "system" */
+  body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    opacity: 0.04;
+    background-image: 
+      linear-gradient(to right, #ffffff 1px, transparent 1px),
+      linear-gradient(to bottom, #ffffff 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
   }
 }
 
@@ -34,7 +51,7 @@
 }
 
 .glass-panel {
-  @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.05)];
+  @apply bg-slate-900/60 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)];
 }
 
 .section-eyebrow {
@@ -49,6 +66,26 @@
 .animate-gradient-x {
   background-size: 200% 200%;
   animation: gradient-x 6s ease infinite;
+}
+
+.text-glow {
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3), 0 0 40px rgba(255, 255, 255, 0.1);
+}
+
+.verdict-glow {
+  text-shadow: 0 0 30px rgba(52, 211, 153, 0.4), 0 0 60px rgba(52, 211, 153, 0.2);
+}
+
+/* ─── Floating Reactions ────────────────────────────────────────────────── */
+@keyframes reaction-float {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-40px) scale(1.5); opacity: 0; }
+}
+
+.reaction-bubble {
+  position: absolute;
+  pointer-events: none;
+  animation: reaction-float 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* ─── Idea Cloud ─────────────────────────────────────────────────────────────
@@ -122,7 +159,7 @@
 }
 
 .reveal-mystery {
-  animation: reveal-shake 0.4s ease-in-out infinite;
+  animation: reveal-shake 0.4s ease-in-out 3;
 }
 
 .reveal-dramatic {
@@ -145,6 +182,45 @@
   100% { transform: translateY(400px) rotate(720deg); opacity: 0; }
 }
 
+/* ─── Mobile Idea Chip — Breathing System ──────────────────────────────────────
+   Simple translateY-only keyframes (no centering transform like the desktop pills).
+   Four distinct rhythms + delays so chips never move in sync — organic feel.
+   Max displacement is 3px to stay well within the container padding.
+────────────────────────────────────────────────────────────────────────────── */
+@keyframes chip-breathe-a {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-3px); }
+}
+@keyframes chip-breathe-b {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-2px); }
+}
+@keyframes chip-breathe-c {
+  0%, 100% { transform: translateY(0); }
+  35%       { transform: translateY(-3px); }
+}
+@keyframes chip-breathe-d {
+  0%, 100% { transform: translateY(0); }
+  65%       { transform: translateY(-2px); }
+}
+
+.idea-chip {
+  will-change: transform;
+  display: inline-flex;
+  align-items: center;
+  /* Only transition non-transform properties to avoid fighting the keyframe */
+  transition: filter 0.2s ease, box-shadow 0.25s ease, opacity 0.2s ease;
+}
+/* Pause + brighten on hover (desktop pointer) */
+.idea-chip:hover {
+  filter: brightness(1.25) saturate(1.2);
+  animation-play-state: paused;
+}
+/* Pause + brighten on touch — brightness change signals interactivity */
+.idea-chip:active {
+  filter: brightness(1.35) saturate(1.3);
+  animation-play-state: paused;
+}
 /* ─── Community Leader Idea Pill ─────────────────────────────────────────────── */
 @keyframes community-leader-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }

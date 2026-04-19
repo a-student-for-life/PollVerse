@@ -10,15 +10,18 @@ import {
   orderBy,
   limit,
   onSnapshot,
+  updateDoc,
   deleteDoc,
   writeBatch,
   getDocs,
   where
 } from 'firebase/firestore';
-import { signInAnonymously } from 'firebase/auth';
+import { signInAnonymously, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 const POLLS_COL_NAME = 'polls';
 const VOTES_COL_NAME = 'votes';
+
+const googleProvider = new GoogleAuthProvider();
 
 /**
  * Truly self-destruct a poll from Firebase.
@@ -90,8 +93,33 @@ export async function createPoll(title, optionsList, mode = 'social', correctOpt
  */
 export async function getOrSignInUser() {
   if (auth.currentUser) return auth.currentUser.uid;
-  const userCred = await signInAnonymously(auth);
-  return userCred.user.uid;
+  try {
+    const userCred = await signInAnonymously(auth);
+    return userCred.user.uid;
+  } catch (err) {
+    console.error("Auth error:", err);
+    throw err;
+  }
+}
+
+/**
+ * Trigger Google Sign-in popup.
+ */
+export async function signInWithGoogle() {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    return result.user;
+  } catch (err) {
+    console.error("Google Sign-in error:", err);
+    throw err;
+  }
+}
+
+/**
+ * Check if the current user is a "real" authenticated user (not anonymous).
+ */
+export function isUserVerified() {
+  return auth.currentUser && !auth.currentUser.isAnonymous;
 }
 
 /**
@@ -99,6 +127,7 @@ export async function getOrSignInUser() {
  */
 export async function voteOnPoll(pollId, optionId, reasonText = '') {
   const userId = await getOrSignInUser();
+  const user = auth.currentUser;
   const voteDocId = `${pollId}_${userId}`;
   
   const pollRef = doc(db, POLLS_COL_NAME, pollId);
@@ -117,6 +146,7 @@ export async function voteOnPoll(pollId, optionId, reasonText = '') {
       throw new Error('Poll does not exist.');
     }
     const pollData = pollDoc.data();
+    const isProfessional = pollData.mode === 'professional';
 
     // 3. Update Options
     const newOptions = pollData.options.map(o => 
@@ -139,7 +169,13 @@ export async function voteOnPoll(pollId, optionId, reasonText = '') {
         newReasons.unshift({
           text: sanitizedReason,
           optionId,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          // Store author identity ONLY for professional polls
+          author: isProfessional ? {
+            name: user?.displayName || 'Verified User',
+            email: user?.email || 'N/A',
+            photoURL: user?.photoURL || null
+          } : null
         });
         if (newReasons.length > 5) {
           newReasons.pop();
@@ -153,7 +189,8 @@ export async function voteOnPoll(pollId, optionId, reasonText = '') {
       userId,
       optionId,
       reason: reasonText || null,
-      timestamp: serverTimestamp()
+      timestamp: serverTimestamp(),
+      authorEmail: isProfessional ? user?.email : null // Traceability for DB admins
     });
 
     // 7. Update Poll Doc
@@ -219,46 +256,49 @@ export async function revealCorrectAnswer(pollId) {
 
 /**
  * Increment a reaction counter on a specific reason inside recentReasons.
- * Uses a transaction to safely read-modify-write the array.
+ * Finds the reason by its stable timestamp to avoid index-shift bugs when
+ * the FIFO buffer rotates new reasons in.
  * @param {string} pollId
- * @param {number} reasonIndex  - index of reason in recentReasons array
- * @param {string} reactionKey  - 'type1' | 'type2' | 'type3'
+ * @param {number} reasonTimestamp  - reason.timestamp value (stable identity)
+ * @param {string} reactionKey      - 'type1' | 'type2' | 'type3'
  */
-export async function addReaction(pollId, reasonIndex, reactionKey) {
+export async function addReaction(pollId, reasonTimestamp, reactionKey) {
   const pollRef = doc(db, POLLS_COL_NAME, pollId);
   await runTransaction(db, async (transaction) => {
     const pollDoc = await transaction.get(pollRef);
     if (!pollDoc.exists()) return;
 
     const reasons = [...(pollDoc.data().recentReasons || [])];
-    if (reasonIndex < 0 || reasonIndex >= reasons.length) return;
+    const idx = reasons.findIndex(r => r.timestamp === reasonTimestamp);
+    if (idx === -1) return;
 
-    const reason = { ...reasons[reasonIndex] };
+    const reason = { ...reasons[idx] };
     const reactions = { ...(reason.reactions || {}) };
     reactions[reactionKey] = (reactions[reactionKey] || 0) + 1;
     reason.reactions = reactions;
-    reasons[reasonIndex] = reason;
+    reasons[idx] = reason;
 
     transaction.update(pollRef, { recentReasons: reasons });
   });
 }
 
-export async function removeReaction(pollId, reasonIndex, reactionKey) {
+export async function removeReaction(pollId, reasonTimestamp, reactionKey) {
   const pollRef = doc(db, POLLS_COL_NAME, pollId);
   await runTransaction(db, async (transaction) => {
     const pollDoc = await transaction.get(pollRef);
     if (!pollDoc.exists()) return;
 
     const reasons = [...(pollDoc.data().recentReasons || [])];
-    if (reasonIndex < 0 || reasonIndex >= reasons.length) return;
+    const idx = reasons.findIndex(r => r.timestamp === reasonTimestamp);
+    if (idx === -1) return;
 
-    const reason = { ...reasons[reasonIndex] };
+    const reason = { ...reasons[idx] };
     const reactions = { ...(reason.reactions || {}) };
     if (reactions[reactionKey] > 0) {
       reactions[reactionKey] -= 1;
     }
     reason.reactions = reactions;
-    reasons[reasonIndex] = reason;
+    reasons[idx] = reason;
 
     transaction.update(pollRef, { recentReasons: reasons });
   });
@@ -320,5 +360,3 @@ export async function agreeWithIdea(pollId, ideaId) {
     transaction.update(pollRef, { ideaCloud: ideas });
   });
 }
-
-
