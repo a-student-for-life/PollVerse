@@ -591,32 +591,32 @@ export default function PollView() {
         <div className={clsx("absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r", cfg.accentGradient)} />
 
         {isCreator && (
-          <div className="absolute top-5 left-6 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary-400 bg-primary-950/40 px-3 py-1.5 rounded-full border border-primary-900/50">
-            <ShieldCheck className="w-3.5 h-3.5" /> Creator Dashboard
+          <div className="absolute top-5 left-6 flex items-center gap-1 text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-primary-400 bg-primary-950/40 px-2 sm:px-3 py-1.5 rounded-full border border-primary-900/50 whitespace-nowrap">
+            <ShieldCheck className="w-3 sm:w-3.5 h-3 sm:h-3.5" /> <span className="hidden sm:inline">Creator Dashboard</span><span className="sm:hidden">Creator</span>
           </div>
         )}
 
-        <div className="absolute top-5 right-6 flex items-center gap-2">
+        <div className="absolute top-5 right-6 flex flex-wrap items-center justify-end gap-2 max-w-[calc(100%-2rem)]">
           {isPro ? (
-            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border bg-slate-950 text-sky-400 border-sky-900/30 shadow-sm">
-              <ShieldCheck className="w-3.5 h-3.5" /> Verified Identity
+            <div className="flex items-center gap-1 text-[8px] sm:text-[10px] font-black uppercase tracking-widest px-2 sm:px-3 py-1.5 rounded-full border bg-slate-950 text-sky-400 border-sky-900/30 shadow-sm whitespace-nowrap">
+              <ShieldCheck className="w-3 sm:w-3.5 h-3 sm:h-3.5" /> <span className="hidden sm:inline">Verified Identity</span><span className="sm:hidden">Verified</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border bg-slate-950 text-primary-400 border-primary-900/30 shadow-sm">
-              <Lock className="w-3.5 h-3.5" /> 100% Anonymous
+            <div className="flex items-center gap-1 text-[8px] sm:text-[10px] font-black uppercase tracking-widest px-2 sm:px-3 py-1.5 rounded-full border bg-slate-950 text-primary-400 border-primary-900/30 shadow-sm whitespace-nowrap">
+              <Lock className="w-3 sm:w-3.5 h-3 sm:h-3.5" /> <span className="hidden sm:inline">100% Anonymous</span><span className="sm:hidden">Anonymous</span>
             </div>
           )}
           {isStructured ? (
-            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border bg-slate-950 text-slate-400 border-slate-800">
-              🔒 Vote Required
+            <div className="flex items-center gap-1 text-[8px] sm:text-[10px] font-black uppercase tracking-widest px-2 sm:px-3 py-1.5 rounded-full border bg-slate-950 text-slate-400 border-slate-800 whitespace-nowrap">
+              <span className="hidden sm:inline">🔒 Vote Required</span><span className="sm:hidden">🔒 Required</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border bg-emerald-950/40 text-emerald-400 border-emerald-900/50">
-              🔓 Open Poll
+            <div className="flex items-center gap-1 text-[8px] sm:text-[10px] font-black uppercase tracking-widest px-2 sm:px-3 py-1.5 rounded-full border bg-emerald-950/40 text-emerald-400 border-emerald-900/50 whitespace-nowrap">
+              <span className="hidden sm:inline">🔓 Open Poll</span><span className="sm:hidden">🔓 Open</span>
             </div>
           )}
-          <div className={clsx("flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border", cfg.badge.replace('bg-', 'bg-').replace('text-', 'text-'))}>
-            {cfg.icon} {cfg.label}
+          <div className={clsx("flex items-center gap-1 text-[8px] sm:text-[10px] font-black uppercase tracking-widest px-2 sm:px-3 py-1.5 rounded-full border whitespace-nowrap", cfg.badge.replace('bg-', 'bg-').replace('text-', 'text-'))}>
+            {cfg.icon} <span className="hidden sm:inline">{cfg.label}</span><span className="sm:hidden">{cfg.label.split(' ')[0]}</span>
           </div>
           <button
             onClick={handleBookmark}
@@ -634,26 +634,26 @@ export default function PollView() {
           <div className="mt-12 mb-6 flex flex-wrap justify-center gap-4 animate-in fade-in zoom-in-95 duration-700">
             {poll.selfDestruct && (
               <div className={clsx(
-                "flex items-center gap-2 px-4 py-2.5 rounded-2xl border-2 shadow-lg transition-all",
+                "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl border-2 shadow-lg transition-all",
                 isExpired ? "bg-rose-950/40 border-rose-900 text-rose-500" : "bg-slate-950 border-rose-900/30 text-rose-400"
               )}>
                 <div className="bg-rose-600 p-1 rounded-lg text-white">
-                  <Timer className="w-4 h-4" />
+                  <Timer className="w-3 sm:w-4 h-3 sm:h-4" />
                 </div>
                 <div className="text-left">
-                  <p className="text-[9px] font-black uppercase tracking-widest opacity-60 leading-none mb-1">Self-Destruct</p>
-                  <p className="text-sm font-black tabular-nums">{isExpired ? "Exploded" : formatTimeLeft(poll.expiresAt - now)}</p>
+                  <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest opacity-60 leading-none mb-0.5 sm:mb-1"><span className="hidden sm:inline">Self-Destruct</span><span className="sm:hidden">Destruct</span></p>
+                  <p className="text-xs sm:text-sm font-black tabular-nums">{isExpired ? "Exploded" : formatTimeLeft(poll.expiresAt - now)}</p>
                 </div>
               </div>
             )}
             {poll.correctOptionId && !isRevealed && (
-              <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border-2 border-emerald-900/30 bg-slate-950 text-emerald-400 shadow-lg transition-all">
+              <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl border-2 border-emerald-900/30 bg-slate-950 text-emerald-400 shadow-lg transition-all">
                 <div className="bg-emerald-600 p-1 rounded-lg text-white">
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-3 sm:w-4 h-3 sm:h-4" />
                 </div>
                 <div className="text-left">
-                  <p className="text-[9px] font-black uppercase tracking-widest opacity-60 leading-none mb-1">Answer Reveal</p>
-                  <p className="text-sm font-black tabular-nums">
+                  <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest opacity-60 leading-none mb-0.5 sm:mb-1"><span className="hidden sm:inline">Answer Reveal</span><span className="sm:hidden">Reveal</span></p>
+                  <p className="text-xs sm:text-sm font-black tabular-nums">
                     {poll.revealAt ? formatTimeLeft(poll.revealAt - now) : "Creator Reveal"}
                   </p>
                 </div>
